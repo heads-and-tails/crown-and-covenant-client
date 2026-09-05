@@ -1,0 +1,2151 @@
+{
+  "protocolVersion": 1,
+  "id": "ABCD1234",
+  "name": "Reference fixture",
+  "seed": 42,
+  "status": "active",
+  "hostId": "p1",
+  "createdAt": 0,
+  "turn": 1,
+  "turnSeconds": 180,
+  "deadline": 1788643318913,
+  "size": 17,
+  "tiles": [
+    {
+      "x": 0,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 0,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 0,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 0,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 0,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 0,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 0,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 2,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 6,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 1,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 12,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 1,
+      "terrain": "forest"
+    },
+    {
+      "x": 16,
+      "y": 1,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 2,
+      "terrain": "mountain"
+    },
+    {
+      "x": 1,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 2,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 2,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 2,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 2,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 2,
+      "terrain": "mountain"
+    },
+    {
+      "x": 0,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 3,
+      "terrain": "forest"
+    },
+    {
+      "x": 4,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 3,
+      "terrain": "forest"
+    },
+    {
+      "x": 8,
+      "y": 3,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 3,
+      "terrain": "forest"
+    },
+    {
+      "x": 10,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 3,
+      "terrain": "forest"
+    },
+    {
+      "x": 14,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 3,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 4,
+      "terrain": "mountain"
+    },
+    {
+      "x": 1,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 8,
+      "y": 4,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 10,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 4,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 4,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 4,
+      "terrain": "mountain"
+    },
+    {
+      "x": 0,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 5,
+      "terrain": "forest"
+    },
+    {
+      "x": 4,
+      "y": 5,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 5,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 5,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 5,
+      "terrain": "forest"
+    },
+    {
+      "x": 14,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 5,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 2,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 6,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 6,
+      "terrain": "mountain"
+    },
+    {
+      "x": 8,
+      "y": 6,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 6,
+      "terrain": "mountain"
+    },
+    {
+      "x": 10,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 6,
+      "terrain": "forest"
+    },
+    {
+      "x": 16,
+      "y": 6,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 7,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 7,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 7,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 7,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 1,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 2,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 3,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 4,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 5,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 6,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 7,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 8,
+      "y": 8,
+      "terrain": "plains"
+    },
+    {
+      "x": 9,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 10,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 11,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 12,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 13,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 14,
+      "y": 8,
+      "terrain": "bridge"
+    },
+    {
+      "x": 15,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 16,
+      "y": 8,
+      "terrain": "river"
+    },
+    {
+      "x": 0,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 9,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 9,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 9,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 9,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 2,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 6,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 10,
+      "terrain": "mountain"
+    },
+    {
+      "x": 8,
+      "y": 10,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 10,
+      "terrain": "mountain"
+    },
+    {
+      "x": 10,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 10,
+      "terrain": "forest"
+    },
+    {
+      "x": 16,
+      "y": 10,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 11,
+      "terrain": "forest"
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 11,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 11,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 11,
+      "terrain": "forest"
+    },
+    {
+      "x": 14,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 11,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 12,
+      "terrain": "mountain"
+    },
+    {
+      "x": 1,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 8,
+      "y": 12,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 10,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 12,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 12,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 12,
+      "terrain": "mountain"
+    },
+    {
+      "x": 0,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 13,
+      "terrain": "forest"
+    },
+    {
+      "x": 4,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 13,
+      "terrain": "forest"
+    },
+    {
+      "x": 8,
+      "y": 13,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 13,
+      "terrain": "forest"
+    },
+    {
+      "x": 10,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 13,
+      "terrain": "forest"
+    },
+    {
+      "x": 14,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 13,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 14,
+      "terrain": "mountain"
+    },
+    {
+      "x": 1,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 5,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 14,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 14,
+      "terrain": "bridge"
+    },
+    {
+      "x": 9,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 14,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 13,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 14,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 14,
+      "terrain": "mountain"
+    },
+    {
+      "x": 0,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 2,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 6,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 7,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 15,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 11,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 12,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 15,
+      "terrain": "forest"
+    },
+    {
+      "x": 16,
+      "y": 15,
+      "terrain": "plains"
+    },
+    {
+      "x": 0,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 1,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 2,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 3,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 4,
+      "y": 16,
+      "terrain": "forest"
+    },
+    {
+      "x": 5,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 6,
+      "y": 16,
+      "terrain": "forest"
+    },
+    {
+      "x": 7,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 8,
+      "y": 16,
+      "terrain": "river"
+    },
+    {
+      "x": 9,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 10,
+      "y": 16,
+      "terrain": "forest"
+    },
+    {
+      "x": 11,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 12,
+      "y": 16,
+      "terrain": "forest"
+    },
+    {
+      "x": 13,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 14,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 15,
+      "y": 16,
+      "terrain": "plains"
+    },
+    {
+      "x": 16,
+      "y": 16,
+      "terrain": "plains"
+    }
+  ],
+  "armies": [
+    {
+      "id": "a1",
+      "owner": "p1",
+      "x": 2,
+      "y": 2,
+      "troops": {
+        "militia": 12,
+        "archer": 6,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      }
+    },
+    {
+      "id": "a2",
+      "owner": "p2",
+      "x": 14,
+      "y": 2,
+      "troops": {
+        "militia": 12,
+        "archer": 6,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      }
+    },
+    {
+      "id": "a3",
+      "owner": "p3",
+      "x": 14,
+      "y": 14,
+      "troops": {
+        "militia": 12,
+        "archer": 6,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      }
+    },
+    {
+      "id": "a4",
+      "owner": "p4",
+      "x": 2,
+      "y": 14,
+      "troops": {
+        "militia": 12,
+        "archer": 6,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      }
+    }
+  ],
+  "messages": [],
+  "offers": [],
+  "alliances": [],
+  "events": [
+    {
+      "id": "e5",
+      "turn": 1,
+      "kind": "system",
+      "text": "The four kingdoms take the field. Hold three capitals for three turns to win."
+    }
+  ],
+  "nextId": 6,
+  "winners": [],
+  "victoryReason": null,
+  "controlStreak": {},
+  "revision": 0,
+  "you": "p1",
+  "treasury": {
+    "grain": 30,
+    "wood": 18,
+    "iron": 6,
+    "horses": 2,
+    "crystal": 2,
+    "stone": 2
+  },
+  "serverTime": 1788643138914,
+  "rules": {
+    "protocolVersion": 1,
+    "mapSize": 17,
+    "players": 4,
+    "defaultTurnSeconds": 180,
+    "maxTurns": 60,
+    "castleIncome": 4,
+    "resourceIncome": 4,
+    "castleDefense": 0.6,
+    "forestDefense": 0.15,
+    "productionCapacity": 6,
+    "armyLimit": 300,
+    "capitalTarget": 3,
+    "victoryHoldTurns": 3,
+    "allianceBreakNotice": 2,
+    "offerLifetime": 3,
+    "scoring": {
+      "castle": 5,
+      "capitalBonus": 3,
+      "resource": 1
+    },
+    "units": {
+      "militia": {
+        "name": "Militia",
+        "power": 2,
+        "cost": {
+          "grain": 2
+        },
+        "counters": {},
+        "description": "Affordable infantry. Reliable in numbers."
+      },
+      "archer": {
+        "name": "Archers",
+        "power": 3,
+        "cost": {
+          "grain": 2,
+          "wood": 2
+        },
+        "counters": {
+          "militia": 1.7,
+          "siege": 1.5
+        },
+        "description": "Strong against militia and siege. +25% power in forests."
+      },
+      "pikeman": {
+        "name": "Pikemen",
+        "power": 3,
+        "cost": {
+          "grain": 2,
+          "iron": 2
+        },
+        "counters": {
+          "knight": 2.5
+        },
+        "description": "Spears decisively counter mounted knights."
+      },
+      "knight": {
+        "name": "Knights",
+        "power": 6,
+        "cost": {
+          "grain": 3,
+          "iron": 2,
+          "horses": 2
+        },
+        "counters": {
+          "archer": 2
+        },
+        "description": "Break archer lines. +20% power on plains."
+      },
+      "mage": {
+        "name": "Mages",
+        "power": 6,
+        "cost": {
+          "grain": 3,
+          "wood": 2,
+          "crystal": 2
+        },
+        "counters": {
+          "knight": 1.8,
+          "pikeman": 1.5
+        },
+        "description": "Arcane attacks punish knights and pikemen."
+      },
+      "siege": {
+        "name": "Siege",
+        "power": 4,
+        "cost": {
+          "grain": 3,
+          "wood": 3,
+          "iron": 2,
+          "stone": 2
+        },
+        "counters": {},
+        "description": "Each engine removes 15 percentage points of enemy castle defense."
+      }
+    },
+    "movement": "One adjacent tile, including diagonals. No mountain/river entry or diagonal corner cutting. Hostile swaps fight without terrain bonuses; survivors stay at their origin.",
+    "combat": "Coalitions fight together. Power includes composition counters, terrain, and castle defense. The strongest side wins; tied leaders destroy all sides. Winning troops suffer up to 95% casualties based on combined enemy power. No random rolls.",
+    "victory": "Hold 3 original capitals for 3 consecutive turns, alone or with one ally. At turn 60, the coalition with the most territory points wins. Exact ties share victory.",
+    "turnOrder": [
+      "Expire alliances and offers",
+      "Hostile swaps",
+      "Simultaneous movement",
+      "Battles and capture",
+      "Income",
+      "Recruitment",
+      "Elimination and victory"
+    ]
+  },
+  "submittedOrders": null,
+  "players": [
+    {
+      "id": "p1",
+      "seat": 0,
+      "name": "Ember Court",
+      "bot": false,
+      "style": "balanced",
+      "ready": false,
+      "eliminated": false,
+      "score": 8,
+      "castles": 1,
+      "sites": 0
+    },
+    {
+      "id": "p2",
+      "seat": 1,
+      "name": "Tidewatch",
+      "bot": false,
+      "style": "aggressive",
+      "ready": false,
+      "eliminated": false,
+      "score": 8,
+      "castles": 1,
+      "sites": 0
+    },
+    {
+      "id": "p3",
+      "seat": 2,
+      "name": "Thornkeep",
+      "bot": false,
+      "style": "diplomat",
+      "ready": false,
+      "eliminated": false,
+      "score": 8,
+      "castles": 1,
+      "sites": 0
+    },
+    {
+      "id": "p4",
+      "seat": 3,
+      "name": "Goldhaven",
+      "bot": false,
+      "style": "defensive",
+      "ready": false,
+      "eliminated": false,
+      "score": 8,
+      "castles": 1,
+      "sites": 0
+    }
+  ],
+  "structures": [
+    {
+      "x": 2,
+      "y": 2,
+      "id": "s1",
+      "name": "Emberhold",
+      "kind": "castle",
+      "owner": "p1",
+      "garrison": {
+        "militia": 6,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "capitalOf": "p1"
+    },
+    {
+      "x": 14,
+      "y": 2,
+      "id": "s2",
+      "name": "Tidewatch",
+      "kind": "castle",
+      "owner": "p2",
+      "garrison": {
+        "militia": 6,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "capitalOf": "p2"
+    },
+    {
+      "x": 14,
+      "y": 14,
+      "id": "s3",
+      "name": "Thornkeep",
+      "kind": "castle",
+      "owner": "p3",
+      "garrison": {
+        "militia": 6,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "capitalOf": "p3"
+    },
+    {
+      "x": 2,
+      "y": 14,
+      "id": "s4",
+      "name": "Goldhaven",
+      "kind": "castle",
+      "owner": "p4",
+      "garrison": {
+        "militia": 6,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "capitalOf": "p4"
+    },
+    {
+      "x": 5,
+      "y": 5,
+      "id": "s5",
+      "name": "Northwatch",
+      "kind": "castle",
+      "owner": null,
+      "garrison": {
+        "militia": 5,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null
+    },
+    {
+      "x": 4,
+      "y": 2,
+      "id": "s6",
+      "name": "Grain fields",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "grain"
+    },
+    {
+      "x": 2,
+      "y": 5,
+      "id": "s7",
+      "name": "Wood grove",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "wood"
+    },
+    {
+      "x": 6,
+      "y": 3,
+      "id": "s8",
+      "name": "Iron site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "iron"
+    },
+    {
+      "x": 4,
+      "y": 6,
+      "id": "s9",
+      "name": "Iron site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "iron"
+    },
+    {
+      "x": 11,
+      "y": 5,
+      "id": "s10",
+      "name": "Dawnspire",
+      "kind": "castle",
+      "owner": null,
+      "garrison": {
+        "militia": 5,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null
+    },
+    {
+      "x": 12,
+      "y": 2,
+      "id": "s11",
+      "name": "Grain fields",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "grain"
+    },
+    {
+      "x": 14,
+      "y": 5,
+      "id": "s12",
+      "name": "Wood grove",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "wood"
+    },
+    {
+      "x": 10,
+      "y": 3,
+      "id": "s13",
+      "name": "Horses site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "horses"
+    },
+    {
+      "x": 12,
+      "y": 6,
+      "id": "s14",
+      "name": "Horses site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "horses"
+    },
+    {
+      "x": 11,
+      "y": 11,
+      "id": "s15",
+      "name": "Duskfort",
+      "kind": "castle",
+      "owner": null,
+      "garrison": {
+        "militia": 5,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null
+    },
+    {
+      "x": 12,
+      "y": 14,
+      "id": "s16",
+      "name": "Grain fields",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "grain"
+    },
+    {
+      "x": 14,
+      "y": 11,
+      "id": "s17",
+      "name": "Wood grove",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "wood"
+    },
+    {
+      "x": 10,
+      "y": 13,
+      "id": "s18",
+      "name": "Crystal site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "crystal"
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "id": "s19",
+      "name": "Crystal site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "crystal"
+    },
+    {
+      "x": 5,
+      "y": 11,
+      "id": "s20",
+      "name": "Westreach",
+      "kind": "castle",
+      "owner": null,
+      "garrison": {
+        "militia": 5,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null
+    },
+    {
+      "x": 4,
+      "y": 14,
+      "id": "s21",
+      "name": "Grain fields",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "grain"
+    },
+    {
+      "x": 2,
+      "y": 11,
+      "id": "s22",
+      "name": "Wood grove",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "wood"
+    },
+    {
+      "x": 6,
+      "y": 13,
+      "id": "s23",
+      "name": "Stone site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "stone"
+    },
+    {
+      "x": 4,
+      "y": 10,
+      "id": "s24",
+      "name": "Stone site",
+      "kind": "resource",
+      "owner": null,
+      "garrison": {
+        "militia": 2,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null,
+      "resource": "stone"
+    },
+    {
+      "x": 8,
+      "y": 8,
+      "id": "s25",
+      "name": "Covenant Keep",
+      "kind": "castle",
+      "owner": null,
+      "garrison": {
+        "militia": 10,
+        "archer": 0,
+        "pikeman": 0,
+        "knight": 0,
+        "mage": 0,
+        "siege": 0
+      },
+      "production": null
+    }
+  ]
+}

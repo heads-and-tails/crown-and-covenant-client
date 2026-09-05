@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crown-and-covenant-client"
+version = "0.1.0"
+description = "Python agents, tactical controller, and local runner for Crown & Covenant"
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "Crown & Covenant contributors"}]
+dependencies = []
+
+[project.scripts]
+covenant = "covenant.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["covenant*"]
+
+[tool.setuptools.package-data]
+covenant = ["*.json"]
