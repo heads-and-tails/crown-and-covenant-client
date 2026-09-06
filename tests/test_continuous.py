@@ -201,6 +201,49 @@ class ContinuousTests(unittest.TestCase):
             self.assertFalse(any(x[0] == "message" for x in c.calls))
             r.close()
 
+    def test_model_failure_after_reply_preserves_answered_state(self):
+        class Partial(Agent):
+            model_agent = True
+
+            def reason(self, ctx, events):
+                incoming = [e for e in events if e["kind"] == "message"]
+                ctx.reply(incoming[0]["data"], "This answer reached the server.")
+                raise RuntimeError("Later model stream failed")
+
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            c.message("first")
+            c.message("second")
+            r = Runner(c, Partial(), state_directory=d)
+            self.run_until(r, lambda: r.stats["model_failures"] == 1)
+            states = {m["id"]: m["state"] for m in r.journal.messages()}
+            self.assertEqual(states["message:m1"], "answered")
+            self.assertEqual(states["message:m2"], "received")
+            r.close()
+            r = Runner(c, Agent(), state_directory=d)
+            self.assertNotIn("message:m1", [e["inboxId"] for e in r.journal.pending()])
+            r.close()
+
+    def test_outbox_reply_receipt_marks_answer_even_after_callback_has_stopped(self):
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            c.message("late receipt")
+            r = Runner(c, FileAgent(), state_directory=d)
+            r.journal.receive(c.events, 1)
+            r.journal.mark(["message:m1"], "presented")
+            r.journal.enqueue(
+                "reply-key",
+                {
+                    "type": "message",
+                    "data": {"to": "p2", "text": "answer"},
+                    "replyTo": "m1",
+                },
+            )
+            r.flush_commands()
+            r.journal.retry_presented(["message:m1"])
+            self.assertEqual(r.journal.messages()[0]["state"], "answered")
+            r.close()
+
     def test_tool_context_never_contains_other_pairs_private_messages(self):
         from covenant.context import Context
         from covenant.harness import CodexStrategist

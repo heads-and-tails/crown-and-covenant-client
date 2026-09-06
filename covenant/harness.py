@@ -465,7 +465,7 @@ class CodexStrategist(Agent):
         key = self._request(
             "initialize",
             {
-                "clientInfo": {"name": "covenant", "version": "0.3.0"},
+                "clientInfo": {"name": "covenant", "version": "0.3.1"},
                 "capabilities": {"experimentalApi": True},
             },
         )

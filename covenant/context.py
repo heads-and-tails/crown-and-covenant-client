@@ -19,7 +19,7 @@ class Context:
         with self.runner.lock:
             return copy.deepcopy(self.runner.last_observation)
 
-    def command(self, kind, data=None, action_id=None):
+    def command(self, kind, data=None, action_id=None, *, reply_to=None):
         if kind not in ("orders", "message", "offer", "answer", "ready", "unready"):
             raise ValueError("Unsupported agent command.")
         self.sequence += 1
@@ -36,7 +36,10 @@ class Context:
                 sort_keys=True,
             ).encode()
         ).hexdigest()
-        self.runner.journal.enqueue(key, {"type": kind, "data": data or {}})
+        command = {"type": kind, "data": data or {}}
+        if reply_to:
+            command["replyTo"] = reply_to
+        self.runner.journal.enqueue(key, command)
         self.runner.wake_network.set()
         until = time.monotonic() + 45
         while not self.runner.stop.is_set() and time.monotonic() < until:
@@ -64,18 +67,12 @@ class Context:
         return self.command("message", {"to": to, "text": text}, action_id)
 
     def reply(self, message, text):
-        result = self.send_message(
-            message["from"],
-            text,
+        return self.command(
+            "message",
+            {"to": message["from"], "text": text},
             "reply:" + message["id"] + ":" + hashlib.sha256(text.encode()).hexdigest(),
+            reply_to=message["id"],
         )
-        if result.get("ok"):
-            self.runner.journal.mark(
-                ["message:" + message["id"]],
-                "answered",
-                result.get("result", {}).get("id"),
-            )
-        return result
 
     def no_reply(self, message_id, reason):
         if not reason.strip():

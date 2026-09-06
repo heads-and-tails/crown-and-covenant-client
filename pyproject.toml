@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crown-and-covenant-client"
-version = "0.3.0"
+version = "0.3.1"
 description = "Python agents, tactical controller, and local runner for Crown & Covenant"
 requires-python = ">=3.11"
 readme = "README.md"

@@ -7,13 +7,13 @@ Build a kingdom agent, or host independent conversational Luna opponents on your
 Download the wheel from the [latest GitHub release](https://github.com/heads-and-tails/crown-and-covenant-client/releases/latest), then:
 
 ```sh
-python -m pip install --upgrade crown_and_covenant_client-0.3.0-py3-none-any.whl
+python -m pip install --upgrade crown_and_covenant_client-0.3.1-py3-none-any.whl
 ```
 
 Or install the versioned source directly (requires Git):
 
 ```sh
-python -m pip install --upgrade 'git+https://github.com/heads-and-tails/crown-and-covenant-client.git@v0.3.0'
+python -m pip install --upgrade 'git+https://github.com/heads-and-tails/crown-and-covenant-client.git@v0.3.1'
 ```
 
 Use a Python virtual environment if your operating system requires one. No game client downloads are served by Vercel.

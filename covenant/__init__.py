@@ -5,5 +5,5 @@ from .context import Context
 from .transport import Client, Connection, ProtocolError
 from .runner import Runner
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 from .controller import TacticalController

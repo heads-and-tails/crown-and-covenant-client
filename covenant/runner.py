@@ -513,8 +513,8 @@ class Runner:
                     "message": str(e)[:400],
                 }
                 self.journal.log("reasoning_error", self.error)
-                self.journal.mark(
-                    [e["inboxId"] for e in self.future_meta["events"]], "received"
+                self.journal.retry_presented(
+                    [e["inboxId"] for e in self.future_meta["events"]]
                 )
                 self.planned_turn = -1
                 self.next_reasoning = time.monotonic() + min(60, 2**self.backoff)
@@ -548,6 +548,23 @@ class Runner:
             ]
             self.journal.mark(ignored, "handled")
             events = [e for e in pending if self.meaningful(e, obs["you"])]
+            if getattr(self.agent, "model_agent", False):
+                conversations = [e for e in events if e["kind"] == "message"]
+                others = [e for e in events if e["kind"] != "message"]
+                # Bound prompt bursts; keep every private message durable for subsequent cycles.
+                coalesced = [
+                    e for e in others if e["kind"] in ("report", "turn", "reset")
+                ][:-8]
+                self.journal.mark(
+                    [e["inboxId"] for e in coalesced],
+                    "handled",
+                    "Coalesced into latest authoritative state",
+                )
+                coalesced_ids = {e["inboxId"] for e in coalesced}
+                events = (
+                    conversations[:6]
+                    + [e for e in others if e["inboxId"] not in coalesced_ids][:12]
+                )
             new_turn = self.planned_turn != obs["turn"]
             if events or new_turn:
                 scope = ["reasoning", obs["turn"], [e["inboxId"] for e in events]]

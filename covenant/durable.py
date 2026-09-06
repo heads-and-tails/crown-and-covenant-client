@@ -41,6 +41,34 @@ class Journal:
         # A process crash re-presents unacknowledged events, not already handled ones.
         self.db.execute("UPDATE inbox SET state='received' WHERE state='presented'")
         self.db.commit()
+        if self.get("reply_receipt_migration", 0) < 1:
+            for (raw,) in self.db.execute(
+                "SELECT data FROM diagnostics WHERE kind='tool_receipt'"
+            ).fetchall():
+                item = json.loads(raw)
+                args = item.get("arguments", {})
+                result = item.get("result") or {}
+                if (
+                    result.get("ok")
+                    and item.get("tool") == "send_message"
+                    and args.get("reply_to")
+                ):
+                    self.mark(
+                        ["message:" + args["reply_to"]],
+                        "answered",
+                        (result.get("result") or {}).get("id"),
+                    )
+                elif (
+                    result.get("ok")
+                    and item.get("tool") == "no_reply"
+                    and args.get("message_id")
+                ):
+                    self.mark(
+                        ["message:" + args["message_id"]],
+                        "no_reply",
+                        args.get("reason"),
+                    )
+            self.set("reply_receipt_migration", 1)
 
     def get(self, key, default=None):
         with self.lock:
@@ -100,6 +128,15 @@ class Journal:
                 )
             ]
 
+    def retry_presented(self, ids):
+        # A failed reasoning cycle must never erase already completed replies or no-reply decisions.
+        with self.lock, self.db:
+            for event_id in ids:
+                self.db.execute(
+                    "UPDATE inbox SET state='received' WHERE id=? AND state='presented'",
+                    (event_id,),
+                )
+
     def enqueue(self, key, command):
         raw = json.dumps(command, sort_keys=True)
         with self.lock, self.db:
@@ -127,6 +164,18 @@ class Journal:
             self.db.execute(
                 "UPDATE outbox SET receipt=? WHERE key=?", (json.dumps(receipt), key)
             )
+            row = self.db.execute(
+                "SELECT command FROM outbox WHERE key=?", (key,)
+            ).fetchone()
+            command = json.loads(row[0]) if row else {}
+            if receipt.get("ok") and command.get("replyTo"):
+                self.db.execute(
+                    "UPDATE inbox SET state='answered',reason=? WHERE id=?",
+                    (
+                        (receipt.get("result") or {}).get("id"),
+                        "message:" + command["replyTo"],
+                    ),
+                )
 
     def receipt(self, key):
         with self.lock:
