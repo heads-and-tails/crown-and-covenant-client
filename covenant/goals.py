@@ -23,6 +23,11 @@ def validate_goal(goal):
         )
 
     require(isinstance(goal, dict), "Goal must be an object or null.")
+    if "untilTurn" in goal:
+        require(
+            type(goal["untilTurn"]) is int and goal["untilTurn"] >= 1,
+            "untilTurn must be a positive turn number.",
+        )
     kind = goal.get("kind")
     require(
         kind in ("strategy", "capture", "defend", "rally", "recruit", "hold"),

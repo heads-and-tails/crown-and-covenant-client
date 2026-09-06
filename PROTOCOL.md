@@ -6,7 +6,7 @@ The authoritative rules are available at `GET /api/rules`. New matches use rules
 
 Sign in with Google on the website to create/join games. Google ID tokens are verified server-side and exchanged for secure application sessions. `GET /api/auth` supplies the public client ID and nonce; `POST /api/auth/google` consumes the credential. `POST /api/auth/logout` revokes the session. Account requests use cookies and the allowed Origin; email addresses never appear in lobby identities.
 
-Create via `POST /api/games` with `{playerName,name,settings:{kind:"classic"|"procedural",...},turnSeconds}`. Join via `POST /api/games/<id>/join` with `{playerName}`. Both require account sessions and return a private seat token. `GET /api/account/games` lists the account's seats. `POST /api/games/<id>/recover` with `{playerId}` rotates a human/agent seat's token for its verified owner. Luna seats recover through the host.
+Create via `POST /api/games` with `{playerName,name,settings:{kind:"classic"|"procedural",...},turnSeconds}`. Join via `POST /api/games/<id>/join` with `{playerName}`. Both require account sessions and return a private seat token. `GET /api/account/games` lists the account's seats. `POST /api/games/<id>/recover` with `{playerId}` rotates a human/agent seat's token for its verified owner. Assigned agent credentials rotate independently, preserving the owning browser's recovery connection. Legacy Luna seats retain their older host recovery path.
 
 Agent requests use `Authorization: Bearer <seat-token>`. Every command POST requires a unique `Idempotency-Key` (8–100 letters, numbers, `_` or `-`). Retry the exact payload with the same key after network failure. Reusing a key with different content returns `KEY_REUSED`. Never expose a connection file or token publicly.
 
@@ -46,14 +46,26 @@ All use the same command endpoint and independent keys:
 {"type":"offer","data":{"to":"p2","kind":"trade","give":{"wood":4,"grain":2},"want":{"iron":2}}}
 {"type":"answer","data":{"offerId":"o12","answer":"accept"}}
 {"type":"ready","data":{"turn":7}}
-{"type":"unready"}
+{"type":"unready","data":{"turn":7}}
 ```
 
 Trade answers: accept, reject, cancel (sender only). Offers expire after three turn transitions and do not reserve resources. Acceptance atomically checks and transfers both stockpiles. Messages/trades never require movement orders or Ready. Ready applies only to its specified current turn; all living players ready may resolve early. The lobby host may `start` when four seats are filled. Formal alliance commands are removed.
 
-## Local Luna host
+## Account-owned client catalog, version 1
 
-`POST /api/agent-hosts` registers a host and returns its private token plus a ten-minute single-use code. Account-authenticated `POST /api/agent-hosts/pair` binds it to that Google account and returns a browser pairing key. Only that account/browser can create practice lobbies with `{agentHost:{id,key}}`. The host's `/work` endpoint uses a private host token and a renewable exclusive instance lease, returning only its assigned seat credentials. General host heartbeats are not participant game contact. Host status may include a bounded diagnostic kind/message; never send account credentials or raw model prompts.
+Capabilities: `agent-catalog-v1`, `agent-sdk-v1`. Rules and protocol remain v3.
+
+- `POST /api/clients` with `{label}` returns private `{id, token, pairCode, expiresAt}`. Keep the token local.
+- `POST /api/clients/pair` with `{code}` requires the Google session and matching Origin. The single-use code binds the client to that account.
+- `GET /api/clients` requires the Google session and lists only that account's computers, availability and catalogs.
+- `POST /api/clients/<id>/pairing` uses the private client token to renew a connection code.
+- `POST /api/clients/<id>/work` uses that token with `{instance,catalog,statuses}`. The process instance has a renewable exclusive 30-second lease. Catalog entries contain `{id,name,description,version,available,error?}`; no code or credentials are uploaded. Status entries contain `{instanceId,status,error?}`. The response supplies only assigned jobs: game/player IDs, per-seat credentials, pinned definition version and assignment ID. A new lease holder revokes previous worker credentials.
+- `POST /api/games/<id>/agents` requires the Google session and Origin, with `{seat,clientId,definitionId,definitionVersion,name,requestId}`. It assigns an owned/open lobby seat, supports repeated definitions, and rejects unavailable/stale catalogs, another account's client/seat or reused IDs with changed content.
+- `POST /api/games/<id>/human` with `{playerId}` returns an owned lobby seat to human control and revokes its old agent credential.
+
+Only actual worker status updates count as worker availability. General catalog/host polling never counts as participant contact for inactivity termination. Workers poll their assigned game state/events normally. Browser and worker credentials are distinct; both remain scoped to the same owning seat. Secret hashes are excluded from observations, public lobby responses and recordings.
+
+Old `/agent-hosts` routes remain for legacy assignment recovery. The current website and client do not create provider-specific practice lobbies.
 
 ## Termination and recordings
 
@@ -64,3 +76,7 @@ Participant polling/actions keep the match active. Ten turn durations without pa
 Administrator-only endpoints: `GET /api/admin/recordings`, `GET /api/admin/recordings/<id>`, `POST /api/admin/games/<id>/end`, and current-version replay. Recording JSON schema 1 carries rules/build metadata, complete compressed-journal contents, checkpoints, commands, frames, messages, trades and termination. Old records preserve only available history and cannot be replayed through v3.
 
 Errors include `UNAUTHORIZED`, `STALE_ORDER`, `STALE_TURN`, `KEY_REUSED`, `CONFLICT`, `CATCHING_UP`, `MATCH_ENDED`, `LEGACY_ARCHIVE`, `PROTOCOL_UPGRADE` and `REMOVED_COMMAND`. Failed atomic actions change no gameplay state. Catch-up and inactivity termination may be committed before a late action is rejected.
+
+## Storage and temporary outages
+
+Live snapshots omit durable receipts and replay frames. PostgreSQL validates a cached world against its authoritative revision on every read; changed worlds use gzip payloads while existing JSON rows remain readable. Client assignment discovery returns only lobby/player metadata. A `503 STORAGE_ALLOWANCE` response means the existing free database allowance is exhausted; commands have not been accepted. Keep local outboxes and workspaces and reconnect after service returns. No ephemeral production storage fallback is used.

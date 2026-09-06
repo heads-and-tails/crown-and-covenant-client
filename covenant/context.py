@@ -1,199 +1,171 @@
-"""Synchronous scripting interface. Networking runs in the runner's separate thread."""
+"""Public cached queries and durable immediate commands."""
 
-from __future__ import annotations
-import copy
 import hashlib
 import json
+import threading
 import time
-from pathlib import Path
-from .transport import ProtocolError, atomic_json
-from .controller import TacticalController
+import uuid
+from .state import GameState, Record, Army, Structure, RouteOrder, ProductionOrder, thaw
+from .pathing import routes, pos
+
+
+def position(value):
+    if isinstance(value, (tuple, list)) and len(value) == 2:
+        value = {"x": value[0], "y": value[1]}
+    if not isinstance(value, (dict, Record)):
+        raise ValueError("Use a tile, {x, y}, or (x, y).")
+    if any(type(value[k]) is not int for k in ("x", "y")):
+        raise ValueError("Tile coordinates must be integers.")
+    return {"x": value["x"], "y": value["y"]}
 
 
 class Context:
-    def __init__(self, runner, scope):
-        self.runner, self.scope, self.sequence = runner, scope, 0
-        self.root = runner.root
+    def __init__(self, runtime, event_id="background"):
+        self._runtime, self._event_id, self._sequence = runtime, event_id, 0
+        self._lock = threading.Lock()
+        self.workspace = runtime.workspace
+        self.instance_id = runtime.instance_id
+        self.resumed = runtime.resumed
+        self.config = Record(runtime.config)
 
     def get_state(self):
-        with self.runner.lock:
-            return copy.deepcopy(self.runner.last_observation)
+        with self._runtime.lock:
+            if self._runtime.snapshot is None:
+                self._runtime.snapshot = GameState(self._runtime.observation)
+            return self._runtime.snapshot
 
-    def command(self, kind, data=None, action_id=None, *, reply_to=None):
-        if kind not in ("orders", "message", "offer", "answer", "ready", "unready"):
-            raise ValueError("Unsupported agent command.")
-        self.sequence += 1
-        key = hashlib.sha256(
-            json.dumps(
-                [
-                    (
-                        "durable-reply"
-                        if action_id and action_id.startswith("reply:")
-                        else self.scope
-                    ),
-                    action_id or self.sequence,
-                ],
-                sort_keys=True,
-            ).encode()
-        ).hexdigest()
-        command = {"type": kind, "data": data or {}}
+    def get_conversation(self, player_id, after=None):
+        return tuple(Record(m) for m in self._runtime.conversation(player_id, after))
+
+    def get_receipt(self, command_id):
+        value = self._runtime.journal.receipt(command_id)
+        return Record(value or {"id": command_id, "status": "pending", "ok": False})
+
+    def _command(self, kind, data, *, stable_key=None, reply_to=None):
+        with self._lock:
+            self._sequence += 1
+            sequence = self._sequence
+        identity = stable_key or (
+            [self._event_id, sequence, kind, thaw(data)]
+            if self._event_id != "background"
+            else uuid.uuid4().hex
+        )
+        key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+        command = {"type": kind, "data": thaw(data)}
         if reply_to:
             command["replyTo"] = reply_to
-        self.runner.journal.enqueue(key, command)
-        self.runner.wake_network.set()
-        until = time.monotonic() + 45
-        while not self.runner.stop.is_set() and time.monotonic() < until:
-            receipt = self.runner.journal.receipt(key)
+        self._runtime.journal.enqueue(key, command)
+        self._runtime.wake.set()
+        until = time.monotonic() + self._runtime.command_timeout
+        while time.monotonic() < until and not self._runtime.stop.is_set():
+            receipt = self._runtime.journal.receipt(key)
             if receipt:
-                if not receipt["ok"]:
-                    raise ProtocolError(
-                        receipt["error"],
-                        receipt.get("status", 0),
-                        receipt.get("code", "ACTION_FAILED"),
-                    )
-                return receipt
-            self.runner.stop.wait(0.1)
-        return {
-            "ok": False,
-            "pending": True,
-            "key": key,
-            "error": "Awaiting server receipt. The durable outbox will retry; do not send a duplicate.",
-        }
+                return Record(receipt)
+            self._runtime.stop.wait(0.03)
+        return Record({"id": key, "status": "pending", "ok": False})
 
-    def set_orders(self, patch, action_id=None):
-        return self.command("orders", patch, action_id)
-
-    def send_message(self, to, text, action_id=None):
-        return self.command("message", {"to": to, "text": text}, action_id)
-
-    def reply(self, message, text):
-        return self.command(
-            "message",
-            {"to": message["from"], "text": text},
-            "reply:" + message["id"] + ":" + hashlib.sha256(text.encode()).hexdigest(),
-            reply_to=message["id"],
-        )
-
-    def no_reply(self, message_id, reason):
-        if not reason.strip():
-            raise ValueError("Explain why a reply is unnecessary.")
-        self.runner.journal.mark(["message:" + message_id], "no_reply", reason[:500])
-        return {"ok": True}
-
-    def offer(self, to, give, want):
-        return self.command(
-            "offer", {"to": to, "kind": "trade", "give": give, "want": want}
-        )
-
-    def answer(self, offer_id, answer):
-        return self.command("answer", {"offerId": offer_id, "answer": answer})
-
-    def set_goal(self, goal_id, goal):
-        self.runner.set_goal(goal_id, goal)
-        return {"ok": True, "goals": self.runner.journal.get("goals", {})}
-
-    def goals(self):
-        return self.runner.journal.get("goals", {})
-
-    def route(self, army_id, destination, avoid_structures=True):
-        o = self.get_state()
-        a = next(
-            (a for a in o["armies"] if a["id"] == army_id and a["owner"] == o["you"]),
-            None,
-        )
-        if not a:
-            raise ValueError("Unknown owned army.")
-        from .controller import routes, pos
-
+    def find_path(self, army, destination, avoid_structures=True):
+        self._entity(army, Army)
+        o, end = self.get_state().to_dict(), position(destination)
         blocked = (
-            {pos(s) for s in o["structures"] if pos(s) != pos(destination)}
+            {pos(s) for s in o["structures"] if pos(s) != pos(end)}
             if avoid_structures
             else set()
         )
-        path = routes(o, pos(a), blocked)(pos(destination))
-        if not path and pos(a) != pos(destination):
-            raise ValueError("Destination unreachable.")
-        return [{"x": x, "y": y} for x, y in path]
-
-    def move(self, army_id, route):
-        o = self.get_state()
-        a = next(
-            (a for a in o["armies"] if a["id"] == army_id and a["owner"] == o["you"]),
-            None,
-        )
-        if not a:
-            raise ValueError("Unknown owned army.")
-        return self.set_orders(
-            {
-                "armies": [
-                    {
-                        "armyId": army_id,
-                        "from": {"x": a["x"], "y": a["y"]},
-                        "route": route,
-                        "revision": a.get("orderRevision", 0),
-                    }
-                ]
-            }
-        )
-
-    def recruit(self, castle_id, troop, count=1):
-        o = self.get_state()
-        s = next(
-            (
-                s
-                for s in o["structures"]
-                if s["id"] == castle_id
-                and s["owner"] == o["you"]
-                and s["kind"] == "castle"
-            ),
-            None,
-        )
-        if not s:
-            raise ValueError("Unknown owned castle.")
-        return self.set_orders(
-            {
-                "castles": [
-                    {
-                        "castleId": castle_id,
-                        "production": (
-                            {"troop": troop, "count": count} if troop else None
-                        ),
-                        "revision": s.get("orderRevision", 0),
-                    }
-                ]
-            }
-        )
-
-    def memory_path(self, name):
-        # Only user memory files; runtime credentials, inboxes and diagnostics are not writable tools.
-        if not isinstance(name, str) or not name or len(name) > 160:
-            raise ValueError("Invalid memory name.")
-        base = (self.root / "memory").resolve()
-        base.mkdir(exist_ok=True)
-        p = (base / name).resolve()
-        if not p.is_relative_to(base) or p == base:
-            raise ValueError("Memory paths must stay in this agent’s folder.")
-        return p
-
-    def read_memory(self, name):
-        p = self.memory_path(name)
-        return p.read_text(encoding="utf-8")[:64000] if p.exists() else ""
-
-    def write_memory(self, name, text):
-        if len(text.encode()) > 64000:
+        path = routes(o, pos(army), blocked)(pos(end))
+        if not path and pos(army) != pos(end):
             raise ValueError(
-                "Memory files are limited to 64 KB. Split topics into separate files."
+                "No legal route to this destination without crossing intermediate structures."
             )
-        p = self.memory_path(name)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        temp = p.with_suffix(p.suffix + ".tmp")
-        temp.write_text(text, encoding="utf-8")
-        temp.replace(p)
-        return {"ok": True, "path": str(p.relative_to(self.root))}
+        return tuple(Record({"x": x, "y": y}) for x, y in path)
 
-    def list_memory(self):
-        return [
-            str(p.relative_to(self.root / "memory"))
-            for p in (self.root / "memory").rglob("*")
-            if p.is_file() and not p.is_symlink()
-        ]
+    def _entity(self, value, cls):
+        if not isinstance(value, cls):
+            raise TypeError(
+                f"Pass a {cls.__name__} from get_state() to preserve its observed revision."
+            )
+        if value.owner != self.get_state().you:
+            raise ValueError("This entity belongs to another kingdom.")
+
+    def move(self, army, destination):
+        return self.set_route(army, self.find_path(army, destination))
+
+    def set_route(self, army, steps):
+        return self.submit_orders([RouteOrder(army, steps)])
+
+    def hold(self, army):
+        return self.set_route(army, [])
+
+    def recruit(self, castle, troop, quantity=1):
+        return self.submit_orders([ProductionOrder(castle, troop, quantity)])
+
+    def submit_orders(self, orders):
+        patch = {"armies": [], "castles": []}
+        for order in orders:
+            if isinstance(order, RouteOrder):
+                self._entity(order.army, Army)
+                patch["armies"].append(
+                    {
+                        "armyId": order.army.id,
+                        "from": position(order.army),
+                        "route": [position(p) for p in order.steps],
+                        "revision": order.army.get("orderRevision", 0),
+                    }
+                )
+            elif isinstance(order, ProductionOrder):
+                self._entity(order.castle, Structure)
+                patch["castles"].append(
+                    {
+                        "castleId": order.castle.id,
+                        "production": (
+                            {"troop": order.troop, "count": order.quantity}
+                            if order.troop
+                            else None
+                        ),
+                        "revision": order.castle.get("orderRevision", 0),
+                    }
+                )
+            else:
+                raise TypeError(
+                    "Use RouteOrder(army, steps) or ProductionOrder(castle, troop, quantity)."
+                )
+        return self._command("orders", patch)
+
+    def send_message(self, player_id, text):
+        return self._command("message", {"to": player_id, "text": text})
+
+    def reply(self, message, text):
+        return self._command(
+            "message",
+            {"to": message["from"], "text": text},
+            stable_key=["reply", message["id"], text],
+            reply_to=message["id"],
+        )
+
+    def propose_trade(self, player_id, give, request):
+        return self._command(
+            "offer", {"to": player_id, "kind": "trade", "give": give, "want": request}
+        )
+
+    def respond_trade(self, offer, decision):
+        if decision not in ("accept", "reject", "cancel"):
+            raise ValueError("Use accept, reject, or cancel.")
+        return self._command("answer", {"offerId": offer["id"], "answer": decision})
+
+    def set_ready(self, turn, ready=True):
+        return self._command("ready" if ready else "unready", {"turn": turn})
+
+    def report_status(self, status, error=None):
+        if status not in (
+            "waiting",
+            "connected",
+            "thinking",
+            "responding",
+            "retrying",
+            "fallback",
+            "offline",
+        ):
+            raise ValueError("Unknown controller status.")
+        self._runtime.status = status
+        self._runtime.error = thaw(error) if error else None
+        self._runtime.persist()

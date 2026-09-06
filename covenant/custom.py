@@ -3,7 +3,7 @@
 from __future__ import annotations
 import importlib
 import multiprocessing
-from .agent import Agent
+from .legacy import Agent
 
 
 def _serve(pipe, spec):

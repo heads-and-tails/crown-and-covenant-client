@@ -10,8 +10,8 @@ import logging
 import threading
 import time
 from pathlib import Path
-from .agent import Agent, ReferenceAgent
-from .context import Context
+from .legacy import Agent, ReferenceAgent
+from .legacy_context import Context
 from .controller import TacticalController, pos
 from .durable import Journal, agent_directory
 from .goals import validate_goal

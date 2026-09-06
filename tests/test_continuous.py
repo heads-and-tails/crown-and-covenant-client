@@ -6,7 +6,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
-from covenant.agent import Agent
+from covenant.legacy import Agent
 from covenant.runner import Runner, FileAgent
 from covenant.transport import Connection, ProtocolError, atomic_json
 from test_v3 import observation
@@ -245,7 +245,7 @@ class ContinuousTests(unittest.TestCase):
             r.close()
 
     def test_tool_context_never_contains_other_pairs_private_messages(self):
-        from covenant.context import Context
+        from covenant.legacy_context import Context
         from covenant.harness import CodexStrategist
 
         with tempfile.TemporaryDirectory() as d:

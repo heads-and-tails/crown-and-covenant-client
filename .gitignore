@@ -8,3 +8,6 @@ connection*.json
 .covenant/
 game-io/
 *.log
+
+instances/
+agents/

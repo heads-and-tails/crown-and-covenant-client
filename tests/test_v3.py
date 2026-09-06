@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import Mock
 from covenant.durable import Journal, agent_directory
 from covenant.transport import Connection, ProtocolError
-from covenant.context import Context
+from covenant.legacy_context import Context
 from covenant.harness import (
     CodexStrategist,
     TOOLS,
@@ -14,7 +14,7 @@ from covenant.harness import (
     repeated_acknowledgement,
 )
 from covenant.runner import Runner
-from covenant.agent import Agent
+from covenant.legacy import Agent
 from covenant.host import Worker
 import multiprocessing
 

@@ -17,7 +17,7 @@ import threading
 import time
 import tomllib
 import uuid
-from .agent import Agent
+from .legacy import Agent
 from .transport import atomic_json
 
 

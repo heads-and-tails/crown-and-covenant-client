@@ -16,7 +16,7 @@ from .transport import Connection, Client, ProtocolError, atomic_json
 from .durable import agent_directory
 from .harness import CodexStrategist
 from .runner import Runner, FileAgent
-from .agent import ReferenceAgent
+from .legacy import ReferenceAgent
 
 log = logging.getLogger("covenant")
 

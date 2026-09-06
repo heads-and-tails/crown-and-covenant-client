@@ -1,0 +1,8 @@
+name = "OpenAI Strategist"
+description = "Diplomacy, persistent conquest goals and self-written Python scripts."
+entrypoint = "agent:MyAgent"
+required_env = ["OPENAI_API_KEY"]
+required_commands = ["git", "docker"]
+[config]
+model = "gpt-5.5"
+fast = false

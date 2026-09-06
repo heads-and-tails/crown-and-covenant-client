@@ -1,0 +1,7 @@
+name = "Codex Strategist"
+description = "Diplomacy, persistent conquest goals and self-written Python scripts."
+entrypoint = "agent:MyAgent"
+required_commands = ["git", "docker", "codex"]
+[config]
+model = "gpt-5.6-luna"
+fast = false

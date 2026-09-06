@@ -1,0 +1,6 @@
+name = "Tactical Commander"
+description = "Autonomous resource capture, recruitment and conquest. No model account needed."
+entrypoint = "agent:MyAgent"
+required_commands = ["git"]
+[config]
+fast = false
