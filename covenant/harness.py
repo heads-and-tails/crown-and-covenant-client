@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
 import signal
 import subprocess
@@ -18,6 +19,51 @@ import tomllib
 import uuid
 from .agent import Agent
 from .transport import atomic_json
+
+
+def repeated_acknowledgement(observation, messages, incoming, reply):
+    """Bound model acknowledgement chains; human conversations are never filtered."""
+    peer = next((p for p in observation["players"] if p["id"] == incoming["from"]), {})
+    if peer.get("controller") != "luna":
+        return False
+
+    def ack(text):
+        return "?" not in text and bool(
+            re.match(
+                r"^(?:agreed|confirmed|recorded|acknowledged|understood|thanks|thank you)\b",
+                text.strip(),
+                re.IGNORECASE,
+            )
+        )
+
+    if not ack(incoming["text"]) or not ack(reply):
+        return False
+    previous = next(
+        (
+            m["event"]["data"]
+            for m in reversed(messages)
+            if m["event"]["data"].get("from") == observation["you"]
+            and m["event"]["data"].get("to") == incoming["from"]
+        ),
+        None,
+    )
+    if (
+        not previous
+        or not ack(previous["text"])
+        or observation["turn"] - previous.get("turn", 0) > 2
+    ):
+        return False
+    # Changed quantities, targets and explicit new decisions deserve a response.
+    facts = lambda text: set(re.findall(r"\d+", text))
+    if (facts(incoming["text"]) | facts(reply)) - facts(previous["text"]):
+        return False
+    if re.search(
+        r"\b(?:instead|changed|captured|lost|attacked|counteroffer|propose|request|extend|cancel)\b",
+        incoming["text"] + " " + reply,
+        re.IGNORECASE,
+    ):
+        return False
+    return True
 
 
 class ModelError(RuntimeError):
@@ -639,7 +685,21 @@ class CodexStrategist(Agent):
                     raise ValueError(
                         "reply_to must identify an incoming message from this counterpart."
                     )
-                result = child.reply(message, a["text"])
+                if repeated_acknowledgement(
+                    child.get_state(), ctx.runner.journal.messages(), message, a["text"]
+                ):
+                    child.no_reply(
+                        message["id"],
+                        "Repeated agent acknowledgement; the agreement is already recorded.",
+                    )
+                    result = {
+                        "ok": True,
+                        "disposition": "no_reply",
+                        "sent": False,
+                        "reason": "Repeated acknowledgement suppressed. Send another message only for a new question, decision, or concrete offer.",
+                    }
+                else:
+                    result = child.reply(message, a["text"])
             else:
                 result = child.send_message(a["to"], a["text"])
         elif name == "no_reply":

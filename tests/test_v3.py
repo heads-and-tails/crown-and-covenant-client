@@ -7,7 +7,12 @@ from unittest.mock import Mock
 from covenant.durable import Journal, agent_directory
 from covenant.transport import Connection, ProtocolError
 from covenant.context import Context
-from covenant.harness import CodexStrategist, TOOLS, restricted_config
+from covenant.harness import (
+    CodexStrategist,
+    TOOLS,
+    restricted_config,
+    repeated_acknowledgement,
+)
 from covenant.runner import Runner
 from covenant.agent import Agent
 
@@ -174,6 +179,94 @@ class V3Tests(unittest.TestCase):
         self.assertEqual(j.messages()[0]["state"], "no_reply")
         self.assertEqual(j.outgoing(), [])
         j.close()
+
+    def test_model_acknowledgement_guard_preserves_human_questions_and_new_terms(self):
+        o = {"you": "p1", "turn": 4, "players": [{"id": "p2", "controller": "luna"}]}
+        previous = {
+            "event": {
+                "data": {
+                    "id": "m1",
+                    "from": "p1",
+                    "to": "p2",
+                    "turn": 4,
+                    "text": "Agreed. I will leave s14 clear and take Duskfort.",
+                }
+            }
+        }
+        incoming = {
+            "id": "m2",
+            "from": "p2",
+            "to": "p1",
+            "turn": 4,
+            "text": "Confirmed. Proceed toward Duskfort; I will secure s14.",
+        }
+        reply = "Recorded. I will keep s14 clear and proceed toward Duskfort."
+        self.assertTrue(repeated_acknowledgement(o, [previous], incoming, reply))
+        self.assertFalse(repeated_acknowledgement(o, [], incoming, reply))
+        for text in [
+            "Confirmed. Could you send grain?",
+            "Confirmed. The new price is 6 grain.",
+            "Confirmed. I captured the western castle.",
+        ]:
+            self.assertFalse(
+                repeated_acknowledgement(
+                    o, [previous], {**incoming, "text": text}, reply
+                )
+            )
+        o["players"][0]["controller"] = "human"
+        self.assertFalse(repeated_acknowledgement(o, [previous], incoming, reply))
+
+    def test_suppressed_model_reply_is_durable_and_sends_no_command(self):
+        client = Mock()
+        client.connection = Connection(
+            "https://one.example", "ABCD1234", "p1", "x" * 30
+        )
+        runner = Runner(client, Agent(), state_directory=self.root)
+        runner.last_observation = {
+            "you": "p1",
+            "turn": 4,
+            "players": [{"id": "p2", "controller": "luna"}],
+        }
+        for i, (sender, recipient, text) in enumerate(
+            [
+                ("p1", "p2", "Agreed. I will leave Duskfort clear."),
+                ("p2", "p1", "Confirmed. I will proceed to Duskfort."),
+            ],
+            1,
+        ):
+            runner.journal.receive(
+                [
+                    {
+                        "kind": "message",
+                        "cursor": i,
+                        "data": {
+                            "id": f"m{i}",
+                            "from": sender,
+                            "to": recipient,
+                            "turn": 4,
+                            "text": text,
+                        },
+                    }
+                ],
+                i,
+            )
+        model = CodexStrategist()
+        ctx = Context(runner, ["test"])
+        result = model._tool(
+            ctx,
+            "send_message",
+            {
+                "to": "p2",
+                "reply_to": "m2",
+                "text": "Recorded. I will leave Duskfort clear.",
+            },
+            "ack-test",
+        )
+        self.assertFalse(result["sent"])
+        self.assertEqual(runner.journal.messages()[-1]["state"], "no_reply")
+        self.assertEqual(runner.journal.outgoing(), [])
+        self.assertEqual(model._tool(ctx, "send_message", {}, "ack-test"), result)
+        runner.close()
 
 
 if __name__ == "__main__":
