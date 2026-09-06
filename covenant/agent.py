@@ -1,14 +1,22 @@
-"""Small extension surface: decide once per turn; diplomacy while planning."""
+"""Turn planning and event-driven diplomacy, with legacy callback adapters."""
 from .controller import TacticalController, RESOURCES
 
 
 class Agent:
+    def on_turn(self, observation: dict) -> dict:
+        """Plan a turn. The runner keeps listening while this hook runs."""
+        return self.decide(observation)
+
+    def on_events(self, observation: dict, events: list[dict]) -> list[dict]:
+        """React to private messages/trades at any time; return immediate commands."""
+        return self.diplomacy(observation)
+
     def decide(self, observation: dict) -> dict:
         """Return {turn, moves, production, ready}. Override in your own agent."""
         return {'turn': observation['turn'], 'moves': [], 'production': [], 'ready': True}
 
     def diplomacy(self, observation: dict) -> list[dict]:
-        """Return [{type: 'message'|'offer'|'answer'|'break-alliance', data: {...}}]."""
+        """Return [{type: 'message'|'offer'|'answer', data: {...}}]."""
         return []
 
 
@@ -24,12 +32,12 @@ class ReferenceAgent(Agent):
     def diplomacy(self, o):
         you = o['you']
         me = next(p for p in o['players'] if p['id'] == you)
-        allied = any(you in a['members'] for a in o['alliances'])
+
         actions = []
         for offer in o['offers']:
             if offer['to'] != you or offer['status'] != 'pending' or offer['expiresTurn'] <= o['turn']:
                 continue
-            accept = offer['kind'] == 'alliance' and not allied and me.get('style') != 'aggressive'
+            accept = False
             if offer['kind'] == 'trade':
                 accept = sum(offer['give'].values()) >= sum(offer['want'].values()) * .75 and all(o['treasury'][r] >= offer['want'].get(r, 0) for r in RESOURCES)
             if accept:
@@ -40,11 +48,6 @@ class ReferenceAgent(Agent):
         opponents = [p for p in o['players'] if p['id'] != you and not p['eliminated']]
         if o['turn'] == 1:
             actions += [{'type': 'message', 'data': {'to': p['id'], 'text': f"Greetings from {me['name']}. I am securing nearby resources and welcome fair trades."}} for p in opponents]
-        if not allied and me.get('style') == 'diplomat' and o['turn'] % 4 == 2:
-            available = [p for p in opponents if not any(p['id'] in a['members'] for a in o['alliances'])]
-            if available:
-                partner = max(available, key=lambda p: p['score'])
-                actions.append({'type': 'offer', 'data': {'to': partner['id'], 'kind': 'alliance', 'give': {}, 'want': {}}})
         if o['turn'] % 3 == 0:
             surplus = max((r for r in RESOURCES if r != 'grain'), key=lambda r: o['treasury'][r])
             need = min((r for r in RESOURCES if r not in ('grain', surplus)), key=lambda r: o['treasury'][r])

@@ -9,8 +9,8 @@ def validate_orders(orders: dict, observation: dict) -> dict:
         raise ValueError('Orders must match the current turn.')
     if not isinstance(orders.get('moves'), list) or len(orders['moves']) > 100:
         raise ValueError('moves must be a list with at most 100 entries.')
-    if not isinstance(orders.get('production'), list) or len(orders['production']) > 30:
-        raise ValueError('production must be a list with at most 30 entries.')
+    if not isinstance(orders.get('production'), list) or len(orders['production']) > 100:
+        raise ValueError('production must be a list with at most 100 entries.')
     if type(orders.get('ready', False)) is not bool:
         raise ValueError('ready must be a boolean.')
     armies = {a['id']: a for a in observation['armies'] if a['owner'] == observation['you']}

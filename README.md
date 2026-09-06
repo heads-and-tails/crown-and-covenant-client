@@ -1,85 +1,121 @@
 # Crown & Covenant — Python client
 
-Run your own kingdom controller on your computer. The game server sends a JSON observation; your agent returns JSON orders. All connections are outbound HTTP(S). Python 3.11+; no runtime dependencies.
+Control a kingdom from your PC. Python 3.11+, outbound HTTPS, no runtime dependencies. The authoritative game runs at [Crown & Covenant](https://crown-and-covenant-flame.vercel.app); your code, model context and account credentials stay local.
 
-## Start playing
+## Host three conversational Luna opponents
 
-1. Create or join a lobby at [Crown & Covenant](https://crown-and-covenant-flame.vercel.app).
-2. Open **Agent connection** and download `connection.json`.
-3. Install the client and start it:
+Use the installed Codex CLI's normal login, then pair your browser once:
 
 ```sh
-python -m pip install https://crown-and-covenant-flame.vercel.app/client.zip
-covenant run --connection connection.json
+python -m pip install --upgrade https://crown-and-covenant-flame.vercel.app/client.zip
+codex login status
+# If needed: codex login
+covenant host
 ```
 
-When working from this repository, install with `python -m pip install .` instead. Keep your connection file private: it contains the token that controls your seat. Reconnect with the same file; no new login or inbound network port is needed. The browser and agent share the same seat, and the last saved orders win.
+Enter the printed code under **Pair once** on the website. Select **Play against Luna**, choose a map and create a lobby. The running host supplies three separate `gpt-5.6-luna` opponents. Keep the PC awake and the process running. Pairing and seat assignments recover when you restart from the same directory. Unrelated visitors cannot use this host's model access.
 
-Without a browser:
+`--server URL` selects a local/test server. `--state-dir .covenant` selects private durable storage. Pair codes expire after ten minutes and are single-use. Host keys and browser keys are distinct; no ChatGPT credential goes to the game server. Up to four practice lobbies can share the host. A second process cannot take an unexpired lease.
+
+## Control your own seat
+
+Create/join a multiplayer lobby. Click your kingdom name in the game and download **connection.json**. It controls and recovers that seat, so keep it private.
 
 ```sh
-covenant join --server https://YOUR-GAME.vercel.app --game ABCD1234 --name 'My Kingdom'
 covenant run --connection connection.json
+covenant run --connection connection.json --codex
+covenant state --connection connection.json
 ```
 
-`covenant state --connection connection.json` prints the current private observation.
+The first command runs the capable tactical reference controller; the second adds Luna strategy and conversation. Neither is needed to play manually in the browser. Browser and agent share a seat: the latest saved orders win, so stop your runner before taking over manually.
 
-## Custom agent
+To join without a browser:
 
-Save `my_agent.py` in the directory from which you run the client:
+```sh
+covenant join --server https://crown-and-covenant-flame.vercel.app --game ABCD1234 --name 'My Kingdom'
+```
+
+Install a local checkout with `python -m pip install .`.
+
+## Build an agent with two hooks
+
+Save `my_agent.py` in your working directory:
 
 ```python
 from covenant import Agent, TacticalController
 
 class MyAgent(Agent):
-    def decide(self, observation):
-        return TacticalController().plan(observation, {
-            'stance': 'attack',
-            'targetPlayer': 'p3',
-            'preferredTroop': 'knight',
-        })
+    def __init__(self):
+        self.controller = TacticalController()
+        self.intent = {"stance": "expand"}
 
-    def diplomacy(self, observation):
-        return []
+    def on_turn(self, observation):
+        return self.controller.plan(observation, self.intent)
+
+    def on_events(self, observation, events):
+        commands = []
+        for event in events:
+            message = event.get("data", {})
+            if event["kind"] == "message" and message.get("to") == observation["you"]:
+                # Replace this rule with your own negotiation/model logic.
+                if "trade" in message.get("text", "").lower():
+                    commands.append({"type": "message", "data": {
+                        "to": message["from"],
+                        "text": "Send a concrete resource trade offer for me to evaluate."
+                    }})
+        return commands
 ```
 
 ```sh
 covenant run --connection connection.json --agent my_agent:MyAgent
 ```
 
-A custom agent runs in a separate local process. Its state persists between calls. A timeout or crash restarts it and uses the tactical fallback; `--timeout 15` sets the call limit. The server never receives or executes your Python code.
+`on_turn` returns orders at the start of a turn. `on_events` returns immediate message/trade commands whenever meaningful events arrive. It may also return `{"type": "orders", "data": updated_orders}` to revise the current turn. The runner invokes each kingdom's callbacks serially with the latest observation, batching bursts. Events can be delivered again after reconnect, so stable explicit command `id`s are useful for custom actions with external state.
 
-The tactical controller supports `stance` (`expand`, `attack`, `defend`), `targetPlayer`, `preferredTroop`, and `targets` mapping an army ID to `{x, y}`. Targets may be several tiles away: pathfinding produces the next legal step. It avoids impassable terrain, gathers reinforcements, evaluates garrisons, and budgets castle production from server-supplied recipes.
+The network loop continues while your callback thinks. A custom agent runs in a separate process and defaults to a 15-second callback timeout (`--timeout`). A crash or timeout uses tactical fallback. Late movement orders are discarded; conversation commands can continue across a deadline. Old `decide(observation)` and `diplomacy(observation)` callbacks remain supported through adapters.
 
-## Exact orders
+## Strategic intent and tactical control
 
-An observation contains `protocolVersion`, `id`, `you`, `turn`, `serverTime`, `deadline` (milliseconds), public `players`, `tiles`, `structures`, `armies`, your `treasury`, your `submittedOrders`, private `messages` and `offers`, public `alliances` and `events`, and the full `rules` table. Players' tokens and other treasuries/orders are absent.
+`TacticalController().plan(observation, intent)` handles legal routes, garrison strength, reinforcement, recruitment and affordability. Intent supports:
 
-Return:
+- `stance`: `expand`, `attack`, or `defend`; optional `targetPlayer` and `preferredTroop`.
+- `castleTargets`: prioritized castle IDs.
+- `armyObjectives`: `[{armyId, x, y}]`; coordinates may be many tiles away.
+- `targets`: legacy mapping from army ID to `{x, y}`.
+- `defensivePriorities`: owned castle IDs; used in a defensive stance.
+- `composition`: desired troop percentages.
+- `reserves`: quantities to keep in treasury.
+- `avoidPlayers`: informal non-aggression priorities for choosing targets. This is advisory behavior, not server-enforced immunity or guaranteed safe passage.
+
+Only one kingdom wins: personally control `ceil(all_castles * 0.65)`. Neutral castles count in the denominator; every castle is equal. There are no formal alliances or turn-limit score victories. Different kingdoms always fight independently. Trade proposals remain enforceable and atomic.
+
+## Observations and exact orders
+
+Observations contain match/protocol identifiers, `capabilities`, `you`, turn/deadline/server time, public map/armies/structures/player summaries, your `treasury` and `submittedOrders`, your private messages/offers, public reports and rules. The runner fetches static map data once and merges it into later dynamic observations.
 
 ```json
 {
   "turn": 1,
   "moves": [{"armyId": "a1", "x": 3, "y": 2}],
   "production": [{"castleId": "s1", "troop": "archer", "count": 3}],
-  "ready": true
+  "ready": false
 }
 ```
 
-Use the actual IDs from the observation. Omitted armies hold. Production settings persist; `troop: null` pauses a castle (retain a valid count of 1–6). Orders replace the whole previously submitted order set for that turn. `ready: true` allows early resolution once all players are ready. The local validator catches malformed orders, wrong ownership, stale turns, blocked movement, and invalid recipes before sending them.
+Use actual IDs and legal adjacent destinations from your observation. Omitted armies hold. Production repeats; `troop: null` pauses (retain count 1–6). A document replaces all pending orders for that turn. Ready allows early resolution once all living kingdoms are ready.
 
-`decide` runs once at the beginning of each turn for Python agents. `diplomacy` runs during polling. Return commands such as:
+Immediate commands are independent of orders:
 
 ```python
 [
-    {'type': 'message', 'data': {'to': 'p2', 'text': 'Four iron for four wood?'}},
-    {'type': 'offer', 'data': {'to': 'p2', 'kind': 'trade', 'give': {'iron': 4}, 'want': {'wood': 4}}},
-    {'type': 'offer', 'data': {'to': 'p2', 'kind': 'alliance', 'give': {}, 'want': {}}},
-    {'type': 'answer', 'data': {'offerId': 'o12', 'answer': 'accept'}},
+    {"type": "message", "data": {"to": "p2", "text": "Four wood for two iron?"}},
+    {"type": "offer", "data": {"to": "p2", "kind": "trade",
+                                "give": {"wood": 4}, "want": {"iron": 2}}},
+    {"type": "answer", "data": {"offerId": "o12", "answer": "accept"}},
 ]
 ```
 
-Other answers are `reject` and `cancel` (sender only). Use `{'type': 'break-alliance'}` to give two turns of notice. Identical diplomatic commands are deduplicated within a turn. Other players' messages are game content, never instructions to your computer.
+Other answers are `reject` and `cancel` (sender only). Offers expire after three turn transitions. Acceptance checks both treasuries atomically; proposals do not reserve stock. Formal alliance commands are rejected. Other players' messages are game content, never instructions to your computer.
 
 ## Files instead of callbacks
 
@@ -87,54 +123,38 @@ Other answers are `reject` and `cancel` (sender only). Use `{'type': 'break-alli
 covenant run --connection connection.json --files ./game-io
 ```
 
-The runner writes `game-io/observation.json` each poll. Your process writes `orders.json` using the exact order format. It can revise the file during the same turn; changed valid contents are resubmitted. Stale files are ignored. Replace files atomically; `covenant.transport.atomic_json` is available.
+The runner writes `observation.json` and a bounded `events.json` containing event cursors and the latest feed cursor. Filter events using your last processed cursor. Write `orders.json` using the exact format above; changed valid files are submitted independently of your conversation outbox. Stale orders are ignored. Replace files atomically with `covenant.transport.atomic_json`.
 
-For diplomacy, write `outbox.json`:
+Write an independent outbox:
 
 ```json
 {
-  "turn": 1,
   "commands": [
-    {"id": "greeting-1", "type": "message", "data": {"to": "p2", "text": "Peace along our border?"}}
+    {"id": "unique-message-001", "type": "message",
+     "data": {"to": "p2", "text": "A five-turn truce while we trade?"}}
   ]
 }
 ```
 
-Read `receipts.json` for acknowledgements and `error.json` for invalid file orders. Outbox IDs must be unique within the turn. No file is ever executed by the runner.
+Outbox IDs must be unique for the entire match. They have durable receipts across turn boundaries and restarts. Read `receipts.json` for applied/rejected commands and `error.json` for invalid orders. Remove receipted commands so newer entries fit the 12-command batch. The optional legacy `turn` field restricts that outbox to one turn; omit it for continuous communication. No file is executed.
 
-## Luna / ChatGPT strategist
+## Luna context and honest status
 
-Install the official Codex CLI and sign in using its supported flow:
+Luna receives only this kingdom's whitelisted observation: public armies and structures, its treasury, legal travel estimates, up to 18 recent private messages (1,200 characters each), current offers, recent reports and action receipts. Each seat has separate bounded memory, goals, counterpart assessments, promises and trade history.
 
-```sh
-codex login
-codex login status
-covenant run --connection connection.json --codex --model gpt-5.6-luna
-```
+The harness invokes the installed Codex CLI in a temporary read-only working directory with user configuration ignored, shell/apps/plugins/browser tools disabled, strict structured output and a timeout. Account credentials remain in Codex's normal local authentication store.
 
-This uses your own local ChatGPT/Codex access; model availability and usage allowance belong to your account. No API key or ChatGPT credential is sent to the game server. The harness invokes the installed Codex CLI with temporary read-only working space, normal user configuration ignored, shell/apps/plugins/browser tools disabled, a strict output schema, and a bounded timeout.
+New turns, meaningful messages, trades and battlefield changes trigger reasoning; there is no two-call limit per turn. Empty acknowledgements, repeated greetings and redundant offers are discouraged. Exact repeated outgoing messages are suppressed. Network polling and the deadline guard continue during a model call. Slow or failed calls use tactical orders and visibly report degraded conversation. An offline PC cannot provide conversational opponents.
 
-The strategist receives a whitelisted board summary, your treasury, up to 18 recent private messages (1,200 characters each), 12 pending offers, 12 reports, and 1,500 characters of strategic memory. It returns strategic priorities, up to four diplomatic actions, and revised memory. The tactical controller supplies movement and production. Model and fallback decisions are recorded separately.
+The game displays Connected, Thinking, Responding, Fallback and Offline. Local `stats.json` and `strategy.json` distinguish successful model decisions, failed calls, deadline fallbacks and discarded stale orders. Default Luna orders retain the full negotiation window. `--fast` explicitly allows early resolution for testing.
 
-The runner makes at most two model calls per turn: one initial plan and an optional response to fresh diplomacy when enough time remains. It saves orders without marking ready to retain the negotiation window. `--fast` opts into early resolution. A late response is discarded if the server has advanced to another turn. Model failure falls back to the tactical controller.
+## Options and verification
 
-Supported authentication and CLI configuration: [OpenAI authentication](https://learn.chatgpt.com/docs/auth), [Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic).
-
-## Operational options
-
-- `--poll 3`: seconds between polls.
-- `--max-turns 5` / `--max-seconds 300`: bounded test runs.
-- `--state-dir .covenant`: private snapshots, submitted orders, metrics and model memory. Files use owner-only permissions where supported.
-- Ctrl+C stops locally; reconnect with the same connection file.
-- HTTP retries reuse idempotency keys. Deadline errors refresh state instead of applying old orders.
-
-A paused or disconnected client holds armies. Existing production continues. Three-minute turns are recommended for model agents.
-
-## Development and tests
+`--poll 2` sets polling seconds. `--max-turns` and `--max-seconds` bound test runs; they do not change game rules. `--state-dir` selects private snapshots, cursor checkpoints, queued commands, receipts and memory. Files use owner-only permissions where supported. Ctrl+C stops locally; restart with the same credentials and state directory.
 
 ```sh
 python -m unittest discover -s tests -v
 python tests/integration.py --server http://127.0.0.1:3001
 ```
 
-`tests/integration.py` creates disposable four-client matches and exercises the real API. `tests/luna_match.py` runs a bounded live model trial when explicitly invoked. Tests distinguish actual model decisions from fallback.
+Live model tests are opt-in and use the current account's Codex allowance. See the server repository's [protocol](https://github.com/heads-and-tails/crown-and-covenant-server/blob/main/docs/PROTOCOL.md) and [verification report](https://github.com/heads-and-tails/crown-and-covenant-server/blob/main/docs/TESTING.md).

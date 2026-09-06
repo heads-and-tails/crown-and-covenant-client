@@ -57,9 +57,6 @@ class TacticalController:
         units = o['rules']['units']
         strength = lambda a: sum(a['troops'].get(t, 0) * units[t]['power'] for t in TROOPS)
         allies = {you}
-        for alliance in o['alliances']:
-            if you in alliance['members'] and (alliance['endsTurn'] is None or alliance['endsTurn'] > o['turn']):
-                allies.update(alliance['members'])
         own = sorted((a for a in o['armies'] if a['owner'] == you), key=lambda a: (-strength(a), a['id']))
         hostile = [a for a in o['armies'] if a['owner'] not in allies]
         blocked = {pos(a) for a in hostile}
@@ -69,25 +66,27 @@ class TacticalController:
             route = routes(o, pos(army), blocked)
             candidates = []
             for site in o['structures']:
-                if site['owner'] in allies:
+                if site['owner'] in allies or site['owner'] in intent.get('avoidPlayers', []):
                     continue
                 path = route(pos(site))
                 defense = sum(strength(a) for a in hostile if pos(a) == pos(site)) + strength({'troops': site['garrison']})
                 defense *= 1.6 if site['kind'] == 'castle' else 1
-                value = (30 if site.get('capitalOf') else 15 if site['kind'] == 'castle' else 7) + (6 if site['owner'] is None else 0)
+                value = (24 if site['kind'] == 'castle' else 7) + (6 if site['owner'] is None else 0)
                 if site.get('resource') and o['treasury'][site['resource']] < 8:
                     value += 6
+                if site['id'] in intent.get('castleTargets', []):
+                    value += 40 - min(30, intent['castleTargets'].index(site['id']) * 5)
                 if site['owner'] == intent.get('targetPlayer', ''):
                     value += 15
                 if stance == 'attack' and site['owner']:
                     value += 20
                 if path and site['id'] not in assigned and strength(army) > defense * (1.0 if me.get('style') == 'aggressive' else 1.2):
                     candidates.append((value / (len(path)+1), site))
-            destination = intent.get('targets', {}).get(army['id'])
+            destination = intent.get('targets', {}).get(army['id']) or next((v for v in intent.get('armyObjectives', []) if v.get('armyId') == army['id']), None)
             if not destination and army != own[0] and strength(army) < 35:
                 destination = own[0]
-            if not destination and stance == 'defend':
-                destination = next((s for s in o['structures'] if s['owner'] == you and s['kind'] == 'castle' and any(max(abs(a['x']-s['x']), abs(a['y']-s['y'])) <= 3 for a in hostile)), None)
+            if not destination and (stance == 'defend' or intent.get('defensivePriorities')):
+                destination = next((s for s in o['structures'] if s['owner'] == you and s['kind'] == 'castle' and (stance == 'defend' or s['id'] in intent.get('defensivePriorities', [])) and any(max(abs(a['x']-s['x']), abs(a['y']-s['y'])) <= 3 for a in hostile)), None)
             if not destination and candidates:
                 candidates.sort(key=lambda c: -c[0])
                 destination = candidates[0][1]
@@ -103,6 +102,9 @@ class TacticalController:
         castles = sorted((s for s in o['structures'] if s['kind'] == 'castle' and s['owner'] == you), key=lambda s: s['id'])
         budget = dict(o['treasury'])
         budget['grain'] += len(castles) * o['rules']['castleIncome']
+        for resource, reserve in intent.get('reserves', {}).items():
+            if resource in budget and type(reserve) is int:
+                budget[resource] = max(0, budget[resource] - max(0, reserve))
         preference = ['mage', 'knight', 'archer', 'pikeman', 'militia']
         if me.get('style') == 'aggressive':
             preference = ['knight', 'mage', 'archer', 'pikeman', 'militia']
@@ -114,16 +116,22 @@ class TacticalController:
             preference.insert(0, 'pikeman')
         if o['turn'] > 12 and sum(a['troops']['siege'] for a in own) < 3:
             preference.insert(0, 'siege')
+        composition = intent.get('composition', {})
+        if composition:
+            counts = {t: sum(a['troops'].get(t, 0) for a in own) for t in TROOPS}
+            total = max(1, sum(counts.values()))
+            desired = sorted((t for t in TROOPS if composition.get(t, 0) > 0), key=lambda t: -(composition[t] / 100 - counts[t] / total))
+            preference = desired + preference
         production = []
         for castle in castles:
-            selected, count = 'militia', 1
+            selected, count = 'militia', 0
             for troop in preference:
                 cost = units[troop]['cost']
                 count = min(o['rules']['productionCapacity'], *(budget[r] // qty for r, qty in cost.items()))
                 if count >= 2 or troop == 'militia':
-                    selected, count = troop, max(1, count)
+                    selected, count = troop, max(0, count)
                     break
             for resource, qty in units[selected]['cost'].items():
                 budget[resource] -= qty * count
-            production.append({'castleId': castle['id'], 'troop': selected, 'count': count})
+            production.append({'castleId': castle['id'], 'troop': selected if count else None, 'count': max(1, count)})
         return {'turn': o['turn'], 'moves': moves, 'production': production, 'ready': True}

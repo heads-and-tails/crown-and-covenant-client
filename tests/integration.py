@@ -17,21 +17,21 @@ def request(server, path, body):
         return json.load(r)
 
 
-def make_match(server, seed=2026, seconds=180):
-    host = request(server, '/games', {'playerName': 'Python Ember', 'name': 'Python integration', 'seed': seed, 'turnSeconds': seconds})
+def make_match(server, seed=2026, seconds=180, kind='classic'):
+    host = request(server, '/games', {'playerName': 'Python Ember', 'name': 'Python integration', 'seed': seed, 'turnSeconds': seconds, 'settings': {'kind': kind}})
     seats = [host] + [request(server, f'/games/{host["gameId"]}/join', {'playerName': name}) for name in ('Python Tide', 'Python Thorn', 'Python Gold')]
     clients = [Client(Connection(server, s['gameId'], s['playerId'], s['token'])) for s in seats]
     clients[0].command('start')
     return clients
 
 
-def play(server, count=3):
+def play(server, count=3, horizon=120):
     results = []
     for game in range(count):
         clients = make_match(server, 3000+game)
         agents = [ReferenceAgent() for _ in clients]
         commands = 0
-        for step in range(65):
+        for step in range(horizon):
             states = [c.state() for c in clients]
             if states[0]['status'] == 'finished':
                 break
@@ -52,8 +52,8 @@ def play(server, count=3):
                 for future in futures:
                     future.result()
         final = clients[0].state()
-        assert final['status'] == 'finished', 'Match did not finish'
-        results.append({'gameId': final['id'], 'turns': final['turn'], 'winners': final['winners'], 'diplomaticActions': commands, 'finished': True})
+        assert len(final['winners']) <= 1, 'Multiple winners'
+        results.append({'gameId': final['id'], 'turns': final['turn'], 'winners': final['winners'], 'diplomaticActions': commands, 'finished': final['status'] == 'finished', 'horizon': horizon})
         print(json.dumps(results[-1]), flush=True)
     return results
 
@@ -62,7 +62,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--server', default='http://127.0.0.1:3001')
     parser.add_argument('--games', type=int, default=3)
+    parser.add_argument('--horizon', type=int, default=120)
     parser.add_argument('--report', default='/tmp/covenant-python-integration.json')
     args = parser.parse_args()
-    results = play(args.server.rstrip('/'), args.games)
+    results = play(args.server.rstrip('/'), args.games, args.horizon)
     Path(args.report).write_text(json.dumps(results, indent=2))

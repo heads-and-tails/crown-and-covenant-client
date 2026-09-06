@@ -64,6 +64,7 @@ class Client:
     def __init__(self, connection: Connection, timeout: float = 12, retries: int = 3):
         self.connection, self.timeout, self.retries = connection, timeout, retries
         self.clock_offset = 0.0
+        self._map = None
 
     def _request(self, path: str, body: dict | None = None, key: str | None = None) -> dict:
         headers = {'Accept': 'application/json', 'Authorization': 'Bearer ' + self.connection.token}
@@ -100,9 +101,18 @@ class Client:
 
     def state(self) -> dict:
         observation = self._request(f'/games/{self.connection.gameId}/state')
-        if observation.get('protocolVersion') != 1:
+        if observation.get('protocolVersion') not in (1, 2):
             raise ProtocolError('Unsupported server protocol. Upgrade the client.', code='VERSION_MISMATCH')
+        self._map = {'tiles': observation['tiles'], 'size': observation['size']}
         return observation
+
+    def updates(self, after: int = 0) -> dict:
+        if self._map is None:
+            self._map = self._request(f'/games/{self.connection.gameId}/map')
+        update = self._request(f'/games/{self.connection.gameId}/events?after={after}')
+        update['observation']['tiles'] = self._map['tiles']
+        update['observation']['size'] = self._map['size']
+        return update
 
     def command(self, kind: str, data: dict | None = None, key: str | None = None) -> dict:
         body = {'type': kind}

@@ -51,7 +51,8 @@ def main():
         print(json.dumps({'turn': turn['turn'], 'seconds': turn['seconds'], 'diplomaticActions': len(sent), 'successes': sum(a.metrics['model_successes'] for a in agents), 'fallbacks': sum(a.metrics['fallbacks'] for a in agents)}), flush=True)
     final = clients[0].state()
     report['finalStatus'], report['finalTurn'] = final['status'], final['turn']
-    report['alliances'] = final['alliances']
+    report['winners'] = final['winners']
+    report['finished'] = final['status'] == 'finished'
     report['metrics'] = [a.metrics for a in agents]
     Path(root/'report.json').write_text(json.dumps(report, indent=2))
     assert sum(a.metrics['model_successes'] for a in agents) >= 4, 'No successful four-agent model round'

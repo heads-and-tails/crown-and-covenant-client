@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -105,18 +106,21 @@ class FileAndTransportTests(unittest.TestCase):
         client = MagicMock()
         client.connection = Connection('http://localhost:3001', 'ABCD1234', 'p1', 'x'*43)
         o = observation()
-        client.state.return_value = o
+        client.updates.return_value = {'observation': o, 'cursor': 1, 'events': []}
         client.seconds_left.return_value = 120
         client.command.return_value = {'result': {'ok': True}}
         client.orders.side_effect = [ProtocolError('network failure'), {'observation': o}]
         with tempfile.TemporaryDirectory() as d:
             runner = Runner(client, state_directory=d)
+            runner.step()
+            runner.future.result(timeout=2)
             with self.assertRaises(ProtocolError):
                 runner.step()
             runner.step()
             self.assertEqual(client.orders.call_count, 2)
             self.assertEqual(client.orders.call_args_list[0], client.orders.call_args_list[1])
             self.assertEqual(runner.stats['turns_planned'], 1)
+            runner.close()
 
 
 class HarnessTests(unittest.TestCase):

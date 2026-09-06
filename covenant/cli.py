@@ -10,11 +10,19 @@ from .agent import ReferenceAgent
 from .harness import CodexStrategist
 from .runner import FileAgent, Runner
 from .custom import IsolatedAgent
+from .host import Host
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Crown & Covenant local agent runner')
     sub = parser.add_subparsers(dest='command', required=True)
+    host = sub.add_parser('host', help='Pair this PC once and supply three private Luna opponents')
+    host.add_argument('--server', default='https://crown-and-covenant-flame.vercel.app')
+    host.add_argument('--state-dir', default='.covenant')
+    host.add_argument('--label', default='My PC')
+    host.add_argument('--fast', action='store_true', help='Resolve early when everyone is ready (testing)')
+    host.add_argument('--max-seconds', type=float)
+    host.add_argument('--model-timeout', type=float, default=70)
     run = sub.add_parser('run', help='Control a kingdom from this computer')
     run.add_argument('--connection', required=True, help='Private connection.json downloaded from the website')
     mode = run.add_mutually_exclusive_group()
@@ -38,7 +46,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%H:%M:%S')
     agent = None
+    runner = None
     try:
+        if args.command == 'host':
+            Host(args.server, args.state_dir, args.label, args.fast, model_timeout=args.model_timeout).run(args.max_seconds)
+            return 0
         if args.command == 'join':
             # No model or account credentials are involved in taking a seat.
             url = args.server.rstrip('/') + '/api/games/' + args.game.upper() + '/join'
@@ -65,7 +77,8 @@ def main(argv=None):
         else:
             agent = ReferenceAgent()
         logging.info('Connected kingdom %s in lobby %s', connection.playerId, connection.gameId)
-        Runner(client, agent, args.poll, args.fast, args.state_dir).run(args.max_turns, args.max_seconds)
+        runner = Runner(client, agent, args.poll, args.fast, args.state_dir)
+        runner.run(args.max_turns, args.max_seconds)
         return 0
     except KeyboardInterrupt:
         logging.info('Stopped. Your kingdom remains available to reconnect.')
@@ -74,6 +87,8 @@ def main(argv=None):
         logging.error('%s', error)
         return 1
     finally:
+        if runner:
+            runner.close()
         if isinstance(agent, IsolatedAgent):
             agent.close()
 
