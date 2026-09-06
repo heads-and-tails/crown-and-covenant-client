@@ -53,12 +53,9 @@ def repeated_acknowledgement(observation, messages, incoming, reply):
         or observation["turn"] - previous.get("turn", 0) > 2
     ):
         return False
-    # Changed quantities, targets and explicit new decisions deserve a response.
-    facts = lambda text: set(re.findall(r"\d+", text))
-    if (facts(incoming["text"]) | facts(reply)) - facts(previous["text"]):
-        return False
+    # Merely repeating army IDs or quantities is not a new decision.
     if re.search(
-        r"\b(?:instead|changed|captured|lost|attacked|counteroffer|propose|request|extend|cancel)\b",
+        r"\b(?:new|revised|instead|changed|captured|lost|counteroffer|propose|request|extend|cancel)\b|\b(?:was|were|have been) attacked\b",
         incoming["text"] + " " + reply,
         re.IGNORECASE,
     ):

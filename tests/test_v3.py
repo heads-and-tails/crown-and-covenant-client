@@ -202,6 +202,14 @@ class V3Tests(unittest.TestCase):
         }
         reply = "Recorded. I will keep s14 clear and proceed toward Duskfort."
         self.assertTrue(repeated_acknowledgement(o, [previous], incoming, reply))
+        self.assertTrue(
+            repeated_acknowledgement(
+                o,
+                [previous],
+                incoming,
+                "Confirmed. Army a22 will honor the turns 2–4 border and leave s14 clear unless attacked.",
+            )
+        )
         self.assertFalse(repeated_acknowledgement(o, [], incoming, reply))
         for text in [
             "Confirmed. Could you send grain?",
