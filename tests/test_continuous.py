@@ -5,12 +5,13 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from test_client import observation
 from covenant.agent import Agent, ReferenceAgent
 from covenant.runner import Runner, FileAgent
 from covenant.transport import Connection, atomic_json
 from covenant.harness import compact_context, CodexStrategist, output_schema
+from covenant.host import Host
 
 
 def client(o):
@@ -144,3 +145,31 @@ class StrategySchemaTests(unittest.TestCase):
         self.assertNotIn('enum', props['diplomacy']['items']['properties']['offerId'])
         self.assertEqual(props['defensivePriorities']['items']['enum'], [s['id'] for s in o['structures'] if s['kind'] == 'castle' and s['owner'] == o['you']])
         self.assertEqual(props['armyObjectives']['items']['properties']['armyId']['enum'], [a['id'] for a in o['armies'] if a['owner'] == o['you']])
+
+
+class HostTests(unittest.TestCase):
+    def test_lobby_waits_without_seat_pollers_then_starts_three_isolated_opponents(self):
+        with tempfile.TemporaryDirectory() as d, patch('covenant.host.CodexStrategist') as strategist, patch('covenant.host.Runner') as runner:
+            host = Host('https://game.example', state_directory=d)
+            host.executor.shutdown(wait=False)
+            host.executor = MagicMock()
+            host.executor.submit.return_value.done.return_value = False
+            host.credentials = {'id': 'host', 'token': 'test-only'}
+            jobs = [{'gameId': 'ABCD1234', 'playerId': f'p{i}', 'token': str(i) * 43, 'status': 'lobby'} for i in range(2, 5)]
+            host.client._request = MagicMock(return_value={'paired': True, 'jobs': jobs})
+            host.step()
+            strategist.assert_not_called()
+            self.assertEqual(host.runners, {})
+            for job in jobs:
+                job['status'] = 'active'
+            runner.side_effect = [MagicMock() for _ in range(3)]
+            host.step()
+            self.assertEqual(strategist.call_count, 3)
+            self.assertEqual(host.executor.submit.call_count, 3)
+            paths = [call.kwargs['memory_path'] for call in strategist.call_args_list]
+            self.assertEqual(len(set(paths)), 3)
+            host.step()
+            self.assertEqual(host.executor.submit.call_count, 3)
+            host.client._request.return_value['jobs'] = []
+            host.step()
+            self.assertEqual(host.runners, {})

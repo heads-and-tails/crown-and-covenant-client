@@ -60,6 +60,10 @@ class Host:
                 self.runners.pop(key).close()
                 self.futures.pop(key, None)
         for key, job in jobs.items():
+            # Lobby seats are connected by the host heartbeat. Start their network/model
+            # loops only when play begins, avoiding three extra idle polling streams.
+            if job['status'] != 'active':
+                continue
             if key in self.runners:
                 if self.futures[key].done():
                     # A finished/eliminated seat is retired by the next lease response. Network failures reconnect.
@@ -90,13 +94,16 @@ class Host:
         start = time.monotonic()
         try:
             while not self.stop.is_set() and (max_seconds is None or time.monotonic() - start < max_seconds):
+                delay = 3
                 try:
-                    self.step()
+                    work = self.step()
+                    if not any(job['status'] == 'active' for job in work['jobs']):
+                        delay = 10
                 except ProtocolError as error:
                     if error.status in (401, 403, 404):
                         raise
                     log.warning('Host reconnecting (%s).', error.code)
-                self.stop.wait(3)
+                self.stop.wait(delay)
         finally:
             for runner in self.runners.values():
                 runner.close()
