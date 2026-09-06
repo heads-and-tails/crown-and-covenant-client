@@ -53,7 +53,10 @@ def run_worker(connection, base, options, stop):
         )
 
         def stop_when_requested():
-            stop.wait()
+            try:
+                stop.recv_bytes()
+            except (EOFError, OSError):
+                pass
             runner.stop.set()
             runner.wake_network.set()
             if hasattr(agent, "cancel"):
@@ -95,13 +98,14 @@ class Worker:
 
     def start(self):
         context = multiprocessing.get_context("spawn")
-        self.stop = context.Event()
+        receiver, self.stop = context.Pipe(duplex=False)
         self.process = context.Process(
             target=run_worker,
-            args=(self.connection, self.base, self.options, self.stop),
+            args=(self.connection, self.base, self.options, receiver),
             name=f"covenant-{self.connection.gameId}-{self.connection.playerId}",
         )
         self.process.start()
+        receiver.close()
         self.started = time.time()
 
     def status(self):
@@ -165,7 +169,14 @@ class Worker:
     def close(self):
         if not self.process:
             return
-        self.stop.set()
+        # A killed process can leave multiprocessing.Event's semaphore locked.
+        # A one-way stop pipe has no shared lock and cannot stall the supervisor.
+        if self.process.is_alive():
+            try:
+                self.stop.send_bytes(b"stop")
+            except (BrokenPipeError, EOFError, OSError):
+                pass
+        self.stop.close()
         self.process.join(timeout=3)
         if self.process.is_alive():
             self.process.terminate()

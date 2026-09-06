@@ -15,6 +15,13 @@ from covenant.harness import (
 )
 from covenant.runner import Runner
 from covenant.agent import Agent
+from covenant.host import Worker
+import multiprocessing
+
+
+def wait_for_worker_stop(pipe):
+    pipe.recv_bytes()
+    pipe.close()
 
 
 def observation():
@@ -38,6 +45,38 @@ class V3Tests(unittest.TestCase):
 
     def tearDown(self):
         self.temp.cleanup()
+
+    def test_supervisor_closes_live_and_exited_workers_without_stalling_other_kingdoms(
+        self,
+    ):
+        mp = multiprocessing.get_context("spawn")
+        workers = []
+        try:
+            for player in ("p1", "p2"):
+                w = Worker(
+                    Connection("https://one.example", "ABCD1234", player, "x" * 30),
+                    self.root,
+                    {},
+                )
+                receiver, w.stop = mp.Pipe(duplex=False)
+                w.process = mp.Process(target=wait_for_worker_stop, args=(receiver,))
+                w.process.start()
+                receiver.close()
+                workers.append(w)
+            workers[0].close()
+            self.assertEqual(workers[0].process.exitcode, 0)
+            self.assertTrue(workers[1].process.is_alive())
+            workers[1].stop.send_bytes(b"stop")
+            workers[1].process.join(timeout=3)
+            self.assertEqual(workers[1].process.exitcode, 0)
+            started = time.monotonic()
+            workers[1].close()
+            self.assertLess(time.monotonic() - started, 1)
+        finally:
+            for w in workers:
+                if w.process.is_alive():
+                    w.process.kill()
+                w.process.join(timeout=3)
 
     def test_inbox_cursor_commit_restart_and_duplicate_suppression(self):
         j = Journal(self.root)
