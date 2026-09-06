@@ -5,171 +5,219 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-from test_client import observation
-from covenant.agent import Agent, ReferenceAgent
+from unittest.mock import Mock
+from covenant.agent import Agent
 from covenant.runner import Runner, FileAgent
-from covenant.transport import Connection, atomic_json
-from covenant.harness import compact_context, CodexStrategist, output_schema
-from covenant.host import Host
+from covenant.transport import Connection, ProtocolError, atomic_json
+from test_v3 import observation
 
 
-def client(o):
-    c = MagicMock()
-    c.connection = Connection('http://localhost:3001', 'ABCD1234', 'p1', 'x' * 43)
-    c.updates.return_value = {'observation': o, 'cursor': 0, 'events': []}
-    c.seconds_left.return_value = 120
-    c.command.return_value = {'result': {'ok': True}}
-    c.orders.return_value = {'observation': o}
-    return c
-
-
-def finish(r):
-    if r.future:
-        r.future.result(timeout=3)
-    r.step()
-
-
-class SlowAgent(Agent):
+class FakeClient:
     def __init__(self):
+        self.connection = Connection(
+            "http://localhost:3013", "ABCD1234", "p1", "x" * 30
+        )
+        self.obs = observation()
+        self.obs["you"] = "p1"
+        self.obs["status"] = "active"
+        self.events = []
+        self.calls = []
+        self.polls = 0
+        self.fail = False
+
+    def updates(self, after=0):
+        self.polls += 1
+        return {
+            "observation": copy.deepcopy(self.obs),
+            "cursor": len(self.events),
+            "events": [e for e in self.events if e["cursor"] > after],
+        }
+
+    def command(self, kind, data=None, key=None):
+        self.calls.append((kind, data, key))
+        if self.fail:
+            self.fail = False
+            raise ProtocolError("temporary outage")
+        return {
+            "result": {"id": "receipt-" + str(len(self.calls))},
+            "observation": copy.deepcopy(self.obs),
+        }
+
+    def message(self, text):
+        n = len(self.events) + 1
+        self.events.append(
+            {
+                "cursor": n,
+                "kind": "message",
+                "data": {
+                    "id": "m" + str(n),
+                    "from": "p2",
+                    "to": "p1",
+                    "text": text,
+                    "turn": self.obs["turn"],
+                    "at": 0,
+                },
+            }
+        )
+
+
+class Echo(Agent):
+    def on_message(self, ctx, message):
+        ctx.reply(message, "Reply to " + message["text"])
+
+
+class Slow(Echo):
+    def __init__(self):
+        self.started = threading.Event()
         self.release = threading.Event()
-        self.seen = []
-    def on_turn(self, o):
+
+    def on_turn(self, ctx):
+        self.started.set()
         self.release.wait(3)
-        return ReferenceAgent().decide(o)
-    def on_events(self, o, events):
-        self.seen.extend(events)
-        return [{'type': 'message', 'data': {'to': 'p2', 'text': 'Answer ' + str(e['cursor'])}} for e in events if e['kind'] == 'message']
 
 
 class ContinuousTests(unittest.TestCase):
-    def test_network_deadlines_and_cross_turn_conversation_continue_while_thinking(self):
-        with tempfile.TemporaryDirectory() as d:
-            o, agent = observation(), SlowAgent()
-            c = client(o)
-            r = Runner(c, agent, state_directory=d)
-            try:
-                r.step()
-                c.seconds_left.return_value = 5
-                c.updates.return_value['cursor'] = 1
-                c.updates.return_value['events'] = [{'cursor': 1, 'kind': 'message', 'data': {'to': 'p1', 'from': 'p2', 'text': 'Trade?'}}]
-                start = time.monotonic()
-                r.step()
-                self.assertLess(time.monotonic() - start, .5)
-                self.assertEqual(c.orders.call_count, 1)
-                self.assertEqual(r.stats['deadline_fallbacks'], 1)
-                next_turn = copy.deepcopy(o)
-                next_turn['turn'] = 2
-                c.updates.return_value = {'observation': next_turn, 'cursor': 2, 'events': []}
-                c.seconds_left.return_value = 120
-                agent.release.set()
-                finish(r)
-                self.assertEqual(r.stats['stale_orders_discarded'], 1)
-                r.last_model_at = 0
-                r.step()
-                finish(r)
-                self.assertTrue(any(e['cursor'] == 1 for e in agent.seen))
-                self.assertTrue(any(call.args[0] == 'message' for call in c.command.call_args_list))
-                self.assertTrue(all(call.args[0]['turn'] in (1, 2) for call in c.orders.call_args_list))
-            finally:
-                agent.release.set()
-                r.close()
+    def run_until(self, r, predicate, seconds=4):
+        until = time.monotonic() + seconds
+        while time.monotonic() < until:
+            r.step()
+            if predicate():
+                return
+            time.sleep(0.015)
+        self.fail("Condition was not reached before the test deadline")
 
-    def test_more_than_two_event_bursts_are_handled_and_cursor_recovers(self):
-        class Conversational(Agent):
-            def on_events(self, o, events):
-                return [{'type': 'message', 'data': {'to': 'p2', 'text': f"Follow-up {e['cursor']}"}} for e in events if e['kind'] == 'message']
+    def test_network_continues_and_messages_queue_during_slow_reasoning_across_turns(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as d:
-            c, a = client(observation()), Conversational()
-            r = Runner(c, a, state_directory=d)
-            r.step(); finish(r)
-            for i in range(1, 5):
-                c.updates.return_value = {'observation': observation(), 'cursor': i, 'events': [{'cursor': i, 'kind': 'message', 'data': {'from': 'p2', 'to': 'p1'}}]}
-                r.last_model_at = 0
-                r.step(); finish(r)
-            self.assertEqual(c.command.call_count, 4)
-            r.close()
-            resumed = Runner(c, a, state_directory=d)
-            self.assertEqual(resumed.cursor, 4)
-            self.assertEqual(len(resumed.sent), 4)
-            resumed.close()
-
-    def test_file_outbox_survives_turn_boundary_and_restart_without_duplicates(self):
-        with tempfile.TemporaryDirectory() as d:
-            directory = Path(d) / 'files'
-            a, o = FileAgent(directory), observation()
-            atomic_json(directory / 'outbox.json', {'commands': [{'id': 'unique-1', 'type': 'message', 'data': {'to': 'p2', 'text': 'Promise'}}]})
-            c = client(o)
+            c = FakeClient()
+            a = Slow()
             r = Runner(c, a, state_directory=d)
             r.step()
-            self.assertEqual(c.command.call_count, 1)
+            self.assertTrue(a.started.wait(1))
+            c.message("first")
+            r.step()
+            c.obs["turn"] += 1
+            c.message("second")
+            r.step()
+            self.assertGreaterEqual(c.polls, 3)
+            self.assertEqual(len(r.journal.pending()), 2)
+            a.release.set()
+            self.run_until(r, lambda: sum(x[0] == "message" for x in c.calls) == 2)
+            self.run_until(r, lambda: not r.future or r.future.done())
+            self.assertEqual(
+                len([m for m in r.journal.messages() if m["state"] == "answered"]), 2
+            )
             r.close()
-            o['turn'] = 2
-            resumed = Runner(c, a, state_directory=d)
-            resumed.step()
-            self.assertEqual(c.command.call_count, 1)
-            receipts = json.loads((directory / 'receipts.json').read_text())
-            self.assertTrue(receipts['commands'][0]['ok'])
-            resumed.close()
 
-    def test_pending_delivery_is_durable_and_private_contexts_are_filtered(self):
-        o = observation()
-        o['messages'] = [{'id': 'private', 'from': 'p2', 'to': 'p3', 'text': 'SECRET'}, {'id': 'mine', 'from': 'p2', 'to': 'p1', 'text': 'My message'}]
-        o['players'][1]['token'] = 'CREDENTIAL'
-        ctx = compact_context(o)
-        self.assertNotIn('SECRET', json.dumps(ctx))
-        self.assertNotIn('CREDENTIAL', json.dumps(ctx))
-        self.assertEqual(len(ctx['untrusted_private_messages']), 1)
+    def test_more_than_two_conversations_in_one_turn_and_reconnect_deduplication(self):
         with tempfile.TemporaryDirectory() as d:
-            c = client(o)
-            r = Runner(c, state_directory=d)
-            r.queue([{'type': 'message', 'data': {'to': 'p2', 'text': 'Durable'}}], 'event-1')
-            r.persist(); r.close()
-            resumed = Runner(c, state_directory=d)
-            resumed.flush_commands(o)
-            self.assertEqual(c.command.call_count, 1)
-            resumed.close()
+            c = FakeClient()
+            r = Runner(c, Echo(), state_directory=d)
+            for i in range(4):
+                c.message(str(i))
+                r.next_reasoning = 0
+                self.run_until(
+                    r, lambda: sum(x[0] == "message" for x in c.calls) == i + 1
+                )
+            self.run_until(r, lambda: r.future is None)
+            r.close()
+            count = len(c.calls)
+            r = Runner(c, Echo(), state_directory=d)
+            r.step()
+            self.assertEqual(len(c.calls), count)
+            self.assertEqual(r.cursor, 4)
+            r.close()
 
-    def test_informal_cooperation_does_not_create_formal_commands(self):
-        o = observation()
-        actions = [{'kind': kind, 'to': 'p2', 'give': {}, 'want': {}} for kind in ('alliance', 'break_alliance', 'shell')]
-        self.assertEqual(CodexStrategist._commands(actions, o), [])
+    def test_file_outbox_and_receipts_survive_turns_and_restart(self):
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            r = Runner(c, FileAgent(), state_directory=d)
+            file = r.agent.directory / "outbox.json"
+            atomic_json(
+                file,
+                {
+                    "commands": [
+                        {
+                            "id": "stable-message",
+                            "type": "message",
+                            "data": {"to": "p2", "text": "durable"},
+                        }
+                    ]
+                },
+            )
+            r.step()
+            r.step()
+            c.obs["turn"] += 1
+            r.step()
+            self.assertEqual(sum(x[0] == "message" for x in c.calls), 1)
+            r.close()
+            r = Runner(c, FileAgent(), state_directory=d)
+            r.step()
+            self.assertEqual(sum(x[0] == "message" for x in c.calls), 1)
+            self.assertTrue((r.agent.directory / "receipts.json").exists())
+            r.close()
+
+    def test_failed_transport_retries_the_same_action_id(self):
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            r = Runner(c, FileAgent(), state_directory=d)
+            r.queue(
+                [
+                    {
+                        "type": "message",
+                        "id": "one",
+                        "data": {"to": "p2", "text": "hello"},
+                    }
+                ],
+                ["file"],
+            )
+            c.fail = True
+            r.flush_commands()
+            self.assertEqual(len(r.journal.outgoing()), 1)
+            r.flush_commands()
+            self.assertEqual(c.calls[0], c.calls[1])
+            self.assertEqual(r.journal.outgoing(), [])
+            r.close()
+
+    def test_model_failure_keeps_goals_and_reports_conversation_failure(self):
+        class Broken(Agent):
+            model_agent = True
+
+            def reason(self, ctx, events):
+                raise RuntimeError("model unavailable")
+
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            c.message("need a reply")
+            r = Runner(c, Broken(), state_directory=d)
+            r.step()
+            r.future.result if False else None
+            self.run_until(r, lambda: r.stats["model_failures"] == 1)
+            self.assertEqual(r.status, "retrying")
+            self.assertEqual(r.error["kind"], "model")
+            self.assertTrue(r.journal.get("goals"))
+            self.assertTrue(r.journal.pending())
+            self.assertFalse(any(x[0] == "message" for x in c.calls))
+            r.close()
+
+    def test_tool_context_never_contains_other_pairs_private_messages(self):
+        from covenant.context import Context
+        from covenant.harness import CodexStrategist
+
+        with tempfile.TemporaryDirectory() as d:
+            c = FakeClient()
+            r = Runner(c, Agent(), state_directory=d)
+            r._accept(c.obs)
+            c.message("my own inbox")
+            r.journal.receive(c.events, 1)
+            ctx = Context(r, ["test"])
+            a = CodexStrategist()
+            a.thread_id = "test"
+            result = a._tool(ctx, "get_conversation", {"player_id": "p3"}, "one")
+            self.assertEqual(result["messages"], [])
+            r.close()
 
 
-class StrategySchemaTests(unittest.TestCase):
-    def test_dynamic_targets_do_not_constrain_free_text_or_other_context_fields(self):
-        o = observation()
-        props = output_schema(o)['properties']
-        self.assertNotIn('enum', props['memory'])
-        self.assertNotIn('enum', props['diplomacy']['items']['properties']['text'])
-        self.assertNotIn('enum', props['diplomacy']['items']['properties']['offerId'])
-        self.assertEqual(props['defensivePriorities']['items']['enum'], [s['id'] for s in o['structures'] if s['kind'] == 'castle' and s['owner'] == o['you']])
-        self.assertEqual(props['armyObjectives']['items']['properties']['armyId']['enum'], [a['id'] for a in o['armies'] if a['owner'] == o['you']])
-
-
-class HostTests(unittest.TestCase):
-    def test_lobby_waits_without_seat_pollers_then_starts_three_isolated_opponents(self):
-        with tempfile.TemporaryDirectory() as d, patch('covenant.host.CodexStrategist') as strategist, patch('covenant.host.Runner') as runner:
-            host = Host('https://game.example', state_directory=d)
-            host.executor.shutdown(wait=False)
-            host.executor = MagicMock()
-            host.executor.submit.return_value.done.return_value = False
-            host.credentials = {'id': 'host', 'token': 'test-only'}
-            jobs = [{'gameId': 'ABCD1234', 'playerId': f'p{i}', 'token': str(i) * 43, 'status': 'lobby'} for i in range(2, 5)]
-            host.client._request = MagicMock(return_value={'paired': True, 'jobs': jobs})
-            host.step()
-            strategist.assert_not_called()
-            self.assertEqual(host.runners, {})
-            for job in jobs:
-                job['status'] = 'active'
-            runner.side_effect = [MagicMock() for _ in range(3)]
-            host.step()
-            self.assertEqual(strategist.call_count, 3)
-            self.assertEqual(host.executor.submit.call_count, 3)
-            paths = [call.kwargs['memory_path'] for call in strategist.call_args_list]
-            self.assertEqual(len(set(paths)), 3)
-            host.step()
-            self.assertEqual(host.executor.submit.call_count, 3)
-            host.client._request.return_value['jobs'] = []
-            host.step()
-            self.assertEqual(host.runners, {})
+if __name__ == "__main__":
+    unittest.main()

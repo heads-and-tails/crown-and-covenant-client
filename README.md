@@ -1,160 +1,200 @@
-# Crown & Covenant — Python client
+# Crown & Covenant — Python client v0.3
 
-Control a kingdom from your PC. Python 3.11+, outbound HTTPS, no runtime dependencies. The authoritative game runs at [Crown & Covenant](https://crown-and-covenant-flame.vercel.app); your code, model context and account credentials stay local.
+Build a kingdom agent, or host independent conversational Luna opponents on your PC. Python 3.11+, outbound HTTPS, no Python runtime dependencies. [Play the game](https://crown-and-covenant-flame.vercel.app). [Download versioned packages](https://github.com/heads-and-tails/crown-and-covenant-client/releases). MIT licensed.
 
-## Host three conversational Luna opponents
+## Install
 
-Use the installed Codex CLI's normal login, then pair your browser once:
+Download the wheel from the [latest GitHub release](https://github.com/heads-and-tails/crown-and-covenant-client/releases/latest), then:
 
 ```sh
-python -m pip install --upgrade https://crown-and-covenant-flame.vercel.app/client.zip
-codex login status
-# If needed: codex login
+python -m pip install --upgrade crown_and_covenant_client-0.3.0-py3-none-any.whl
+```
+
+Or install the versioned source directly (requires Git):
+
+```sh
+python -m pip install --upgrade 'git+https://github.com/heads-and-tails/crown-and-covenant-client.git@v0.3.0'
+```
+
+Use a Python virtual environment if your operating system requires one. No game client downloads are served by Vercel.
+
+## Play against Luna
+
+Install the official [Codex CLI](https://developers.openai.com/codex/cli/) and use its normal ChatGPT login:
+
+```sh
+codex login
 covenant host
 ```
 
-Enter the printed code under **Pair once** on the website. Select **Play against Luna**, choose a map and create a lobby. The running host supplies three separate `gpt-5.6-luna` opponents. Keep the PC awake and the process running. Pairing and seat assignments recover when you restart from the same directory. Unrelated visitors cannot use this host's model access.
+1. Keep that process running and your PC awake.
+2. Open the game website and **sign in with Google**.
+3. Select **Pair once** and enter the printed ten-minute, single-use code.
+4. Choose **Play against Luna**, select a map and create the lobby.
+5. Start when four kingdoms are present. Three independent `gpt-5.6-luna` processes supply opponents.
 
-`--server URL` selects a local/test server. `--state-dir .covenant` selects private durable storage. Pair codes expire after ten minutes and are single-use. Host keys and browser keys are distinct; no ChatGPT credential goes to the game server. Up to four practice lobbies can share the host. A second process cannot take an unexpired lease.
+The host belongs to the Google account that paired it. An unrelated visitor cannot consume that host's model access. ChatGPT authentication stays on your PC; the game server receives only scoped game credentials and status. Luna uses your existing Codex account allowance; no API key or new model billing service is added.
 
-## Control your own seat
+Restart `covenant host` with the same `--state-dir` to recover assignments. If browser storage was cleared, use `covenant host --pair-again`, then pair the fresh code while signed in to the same Google owner account. The host checks Codex's experimental App Server dynamic-tool interface and gives a clear upgrade error when unavailable. Up to four practice lobbies may share one host; each kingdom remains independent. Unstarted lobbies wait without model calls. `--server URL`, `--state-dir DIRECTORY`, `--model-timeout 90`, and `--label 'My PC'` customize hosting. A second host process cannot take an unexpired lease.
 
-Create/join a multiplayer lobby. Click your kingdom name in the game and download **connection.json**. It controls and recovers that seat, so keep it private.
+## Control your own seat or several seats
+
+Create/join a game through the signed-in website. Click your kingdom name and download **connection.json**. This is a private seat credential: do not commit or share it. To recover after browser data loss, sign in again and use **Resume** to recover your seat. Downloading a newly recovered connection rotates the old token.
 
 ```sh
+# Tactical controller only
 covenant run --connection connection.json
+# Luna directing the controller through tools
 covenant run --connection connection.json --codex
+# Multiple independent Luna kingdoms in parallel
+covenant run --connection kingdom-one.json --connection kingdom-two.json --codex
+# Inspect state and current orders
 covenant state --connection connection.json
 ```
 
-The first command runs the capable tactical reference controller; the second adds Luna strategy and conversation. Neither is needed to play manually in the browser. Browser and agent share a seat: the latest saved orders win, so stop your runner before taking over manually.
+Each seat runs in a separate worker process. The supervisor restarts failed workers independently. Two agents in the same match can negotiate using normal game messages. Human and agent actions share a seat's persistent order book; entity revisions prevent an old decision overwriting a newer one. Stop your worker before taking over manually.
 
-To join without a browser:
+## Write a script with optional synchronous callbacks
 
-```sh
-covenant join --server https://crown-and-covenant-flame.vercel.app --game ABCD1234 --name 'My Kingdom'
-```
-
-Install a local checkout with `python -m pip install .`.
-
-## Build an agent with two hooks
-
-Save `my_agent.py` in your working directory:
+Save `my_agent.py` in the directory where you launch the client:
 
 ```python
-from covenant import Agent, TacticalController
+from covenant import Agent
 
 class MyAgent(Agent):
-    def __init__(self):
-        self.controller = TacticalController()
-        self.intent = {"stance": "expand"}
+    def on_message(self, ctx, message):
+        ctx.reply(message, "What resources would you like to exchange?")
 
-    def on_turn(self, observation):
-        return self.controller.plan(observation, self.intent)
-
-    def on_events(self, observation, events):
-        commands = []
-        for event in events:
-            message = event.get("data", {})
-            if event["kind"] == "message" and message.get("to") == observation["you"]:
-                # Replace this rule with your own negotiation/model logic.
-                if "trade" in message.get("text", "").lower():
-                    commands.append({"type": "message", "data": {
-                        "to": message["from"],
-                        "text": "Send a concrete resource trade offer for me to evaluate."
-                    }})
-        return commands
+    def on_turn(self, ctx):
+        state = ctx.get_state()  # My treasury, income and current orders included.
+        ctx.set_goal("strategy", {
+            "kind": "strategy", "intent": {"stance": "expand"}
+        })
 ```
 
 ```sh
 covenant run --connection connection.json --agent my_agent:MyAgent
 ```
 
-`on_turn` returns orders at the start of a turn. `on_events` returns immediate message/trade commands whenever meaningful events arrive. It may also return `{"type": "orders", "data": updated_orders}` to revise the current turn. The runner invokes each kingdom's callbacks serially with the latest observation, batching bursts. Events can be delivered again after reconnect, so stable explicit command `id`s are useful for custom actions with external state.
+Callbacks are optional. Existing routes and repeating production continue without new callbacks. Networking runs separately, so incoming messages are durably queued and outgoing actions are sent while reasoning runs. Callbacks within one kingdom run serially. `on_events(ctx, events)` handles trades, goals and battlefield changes; `on_turn(ctx)` handles a new turn. Read `examples/my_agent.py` for a practical agent that handles trades and memory.
 
-The network loop continues while your callback thinks. A custom agent runs in a separate process and defaults to a 15-second callback timeout (`--timeout`). A crash or timeout uses tactical fallback. Late movement orders are discarded; conversation commands can continue across a deadline. Old `decide(observation)` and `diplomacy(observation)` callbacks remain supported through adapters.
+Context methods return concrete receipts or explicit errors:
 
-## Strategic intent and tactical control
+| Method | Purpose |
+|---|---|
+| `get_state()` | Latest observation, including your complete current order book |
+| `set_goal(id, goal)` | Persist a strategy/capture/defend/rally/recruit/hold goal; null removes it |
+| `goals()` | Inspect persistent tactical goals |
+| `route(army_id, destination, avoid_structures=True)` | Calculate a local legal path |
+| `move(army_id, route)` | Replace this army's route using current revision/origin |
+| `recruit(castle_id, troop, count=1)` | Set recurring recruitment; troop null pauses |
+| `set_orders(patch)` | Atomically replace only entities in an explicit revision-checked patch |
+| `reply(message, text)` | Reply immediately and record the answered message |
+| `send_message(player_id, text, action_id=None)` | Send an immediate private message |
+| `no_reply(message_id, reason)` | Explicitly acknowledge that no answer is needed |
+| `offer(player_id, give, want)` | Propose a multi-resource exchange |
+| `answer(offer_id, answer)` | Accept, reject, or cancel with authoritative affordability checks |
+| `read_memory(name)`, `write_memory(name,text)`, `list_memory()` | Maintain files restricted to this kingdom's memory folder |
 
-`TacticalController().plan(observation, intent)` handles legal routes, garrison strength, reinforcement, recruitment and affordability. Intent supports:
+A pending receipt means the durable outbox still owns the action: do not resend it with a new ID. Network retries reuse stable keys. A stale order error means inspect fresh state and reconsider the instruction. `on_turn(observation)`, `on_events(observation, events)`, `decide(observation)` and `diplomacy(observation)` retain adapters for older scripts; new scripts should use the `ctx` parameter and persistent goals.
 
-- `stance`: `expand`, `attack`, or `defend`; optional `targetPlayer` and `preferredTroop`.
-- `castleTargets`: prioritized castle IDs.
-- `armyObjectives`: `[{armyId, x, y}]`; coordinates may be many tiles away.
-- `targets`: legacy mapping from army ID to `{x, y}`.
-- `defensivePriorities`: owned castle IDs; used in a defensive stance.
-- `composition`: desired troop percentages.
-- `reserves`: quantities to keep in treasury.
-- `avoidPlayers`: informal non-aggression priorities for choosing targets. This is advisory behavior, not server-enforced immunity or guaranteed safe passage.
-
-Only one kingdom wins: personally control `ceil(all_castles * 0.65)`. Neutral castles count in the denominator; every castle is equal. There are no formal alliances or turn-limit score victories. Different kingdoms always fight independently. Trade proposals remain enforceable and atomic.
-
-## Observations and exact orders
-
-Observations contain match/protocol identifiers, `capabilities`, `you`, turn/deadline/server time, public map/armies/structures/player summaries, your `treasury` and `submittedOrders`, your private messages/offers, public reports and rules. The runner fetches static map data once and merges it into later dynamic observations.
-
-```json
-{
-  "turn": 1,
-  "moves": [{"armyId": "a1", "x": 3, "y": 2}],
-  "production": [{"castleId": "s1", "troop": "archer", "count": 3}],
-  "ready": false
-}
-```
-
-Use actual IDs and legal adjacent destinations from your observation. Omitted armies hold. Production repeats; `troop: null` pauses (retain count 1–6). A document replaces all pending orders for that turn. Ready allows early resolution once all living kingdoms are ready.
-
-Immediate commands are independent of orders:
+## Goals and exact commands
 
 ```python
-[
-    {"type": "message", "data": {"to": "p2", "text": "Four wood for two iron?"}},
-    {"type": "offer", "data": {"to": "p2", "kind": "trade",
-                                "give": {"wood": 4}, "want": {"iron": 2}}},
-    {"type": "answer", "data": {"offerId": "o12", "answer": "accept"}},
-]
+ctx.set_goal("conquest", {"kind": "capture", "structureId": "s15"})
+ctx.set_goal("defense", {"kind": "defend", "structureId": "s3"})
+ctx.set_goal("rally", {"kind": "rally", "armyId": "a1", "destination": {"x": 9, "y": 12}})
+ctx.set_goal("reserve", {"kind": "strategy", "intent": {
+    "stance": "expand", "castleTargets": ["s15", "s25"],
+    "reserves": {"grain": 6}, "composition": {"militia": 70, "archer": 30}
+}})
 ```
 
-Other answers are `reject` and `cancel` (sender only). Offers expire after three turn transitions. Acceptance checks both treasuries atomically; proposals do not reserve stock. Formal alliance commands are rejected. Other players' messages are game content, never instructions to your computer.
+Use real IDs from state. Goal inputs are validated before persistence. Reserves and composition are objects mapping names to quantities, not scalar values. Strategic intent also supports `defensivePriorities`, `preferredTroop`, `avoidPlayers`, `targetPlayer`, `targets` and `armyObjectives`. Informal avoidance is advisory, never protected passage or an alliance mechanic.
 
-## Files instead of callbacks
-
-```sh
-covenant run --connection connection.json --files ./game-io
-```
-
-The runner writes `observation.json` and a bounded `events.json` containing event cursors and the latest feed cursor. Filter events using your last processed cursor. Write `orders.json` using the exact format above; changed valid files are submitted independently of your conversation outbox. Stale orders are ignored. Replace files atomically with `covenant.transport.atomic_json`.
-
-Write an independent outbox:
+An exact persistent order patch:
 
 ```json
 {
-  "commands": [
-    {"id": "unique-message-001", "type": "message",
-     "data": {"to": "p2", "text": "A five-turn truce while we trade?"}}
-  ]
+  "armies": [{"armyId":"a1","from":{"x":2,"y":2},"revision":0,
+    "route":[{"x":3,"y":2},{"x":4,"y":3}]}],
+  "castles": [{"castleId":"s1","revision":0,
+    "production":{"troop":"militia","count":2}}]
 }
 ```
 
-Outbox IDs must be unique for the entire match. They have durable receipts across turn boundaries and restarts. Read `receipts.json` for applied/rejected commands and `error.json` for invalid orders. Remove receipted commands so newer entries fit the 12-command batch. The optional legacy `turn` field restricts that outbox to one turn; omit it for continuous communication. No file is executed.
+Only mentioned armies/castles change. Omitted entities retain orders. Empty route Holds; null production Pauses. One route step advances per turn and is consumed only on arrival. Script routes can intentionally traverse structures or risk armies. Human browser routes avoid intermediate structures. [Full public protocol](PROTOCOL.md).
 
-## Luna context and honest status
+Ready is independent: `ctx.command("ready", {"turn": ctx.get_state()["turn"]})`. Default Luna preserves the negotiation window. `--fast` marks ready once a reasoning cycle and outgoing commands finish, for accelerated tests.
 
-Luna receives only this kingdom's whitelisted observation: public armies and structures, its treasury, legal travel estimates, up to 18 recent private messages (1,200 characters each), current offers, recent reports and action receipts. Each seat has separate bounded memory, goals, counterpart assessments, promises and trade history.
+## Memory, tools and process isolation
 
-The harness invokes the installed Codex CLI in a temporary read-only working directory with user configuration ignored, shell/apps/plugins/browser tools disabled, strict structured output and a timeout. Account credentials remain in Codex's normal local authentication store.
+Every match-specific file is stored under:
 
-New turns, meaningful messages, trades and battlefield changes trigger reasoning; there is no two-call limit per turn. Empty acknowledgements, repeated greetings and redundant offers are discouraged. Exact repeated outgoing messages are suppressed. Network polling and the deadline guard continue during a model call. Slow or failed calls use tactical orders and visibly report degraded conversation. An offline PC cannot provide conversational opponents.
-
-The game displays Connected, Thinking, Responding, Fallback and Offline. Local `stats.json` and `strategy.json` distinguish successful model decisions, failed calls, deadline fallbacks and discarded stale orders. Default Luna orders retain the full negotiation window. `--fast` explicitly allows early resolution for testing.
-
-## Options and verification
-
-`--poll 2` sets polling seconds. `--max-turns` and `--max-seconds` bound test runs; they do not change game rules. `--state-dir` selects private snapshots, cursor checkpoints, queued commands, receipts and memory. Files use owner-only permissions where supported. Ctrl+C stops locally; restart with the same credentials and state directory.
-
-```sh
-python -m unittest discover -s tests -v
-python tests/integration.py --server http://127.0.0.1:3001
+```text
+<state-dir>/servers/<server-hash>/games/<game-id>/agents/<player-id>/
+  identity.json, observation.json, goals.json, status.json, stats.json
+  journal.sqlite                 # Durable inbox, outbox, receipts and diagnostic history
+  memory/                        # Agent-authored objectives, promises and notes
+  model/                         # Ephemeral-session checkpoints and local transcripts
+  files/                         # Optional script file interface
+  worker.log
 ```
 
-Live model tests are opt-in and use the current account's Codex allowance. See the server repository's [protocol](https://github.com/heads-and-tails/crown-and-covenant-server/blob/main/docs/PROTOCOL.md) and [verification report](https://github.com/heads-and-tails/crown-and-covenant-server/blob/main/docs/TESTING.md).
+The server hash prevents collisions across websites. Each kingdom has its own directory, working directory, process, tactical controller, model session and delivery journal. Shared Codex authentication stays outside these folders and is unavailable to model tools. The harness disables shell, general file tools, browser, plugins, apps and unrelated integrations. Memory path traversal and symlink escapes are rejected. Custom Python scripts are owner-written local programs, so run only scripts you trust; they have normal Python/OS capabilities.
+
+Luna uses actual App Server tools: inspect state/orders, set goals, calculate/submit routes, recruit, inspect conversations, send/answer messages, trade, and maintain memory. Tool results are returned immediately and retained locally. Sessions are ephemeral; fresh contexts rebuild from memory, goals, queued events and authoritative receipts. Compaction does not delete messages. The inbox distinguishes received, presented, answered, deliberately unanswered, and unresolved messages. Exact replayed replies are suppressed. Acknowledgement loops and repeated greetings are discouraged.
+
+## File interface
+
+```sh
+covenant run --connection connection.json --files enabled
+```
+
+For isolation, files are always placed in the printed kingdom directory's `files/` subfolder, even when an older caller passes a different `--files` value. The value only enables file mode.
+
+Read `observation.json` and `events.json`. Write `orders.json` as `{"id":"unique-edit-1","orders": <patch>}`. Write `outbox.json` independently:
+
+```json
+{"commands":[{"id":"proposal-message-1","type":"message",
+  "data":{"to":"p2","text":"Four wood for two iron?"}}]}
+```
+
+IDs are unique for the match. The client reads the outbox throughout the turn, independently of orders. `receipts.json` records applied/rejected commands across restarts. Remove receipted commands from your outbox. Invalid input appears in `error.json`. Use atomic file replacement, such as `covenant.transport.atomic_json`.
+
+Acknowledge handled inbox entries with `acknowledgements.json`:
+
+```json
+{"events":[{"inboxId":"message:m12","state":"answered","reason":"Answered by proposal-message-1"}]}
+```
+
+Allowed states: `handled`, `answered`, `no_reply`. Unacknowledged events remain durable and are presented again; use event IDs for deduplication. Do not use a timestamp or new turn to erase an unanswered message.
+
+## Rules, privacy and recordings
+
+Four kingdoms, one winner: personally control `ceil(all castles × 0.65)`. Neutral castles count. No shared victory, formal alliances or score-based turn limit. Private agreements may be honored or betrayed. Resource trade is atomic and enforceable; acceptance checks both private stockpiles. Offers expire after three turn transitions.
+
+New kingdoms have 30 grain, zero other resources and 18 militia. Castle garrisons are 10 militia; resource garrisons 6. Garrisons restore for free after battle/capture and cannot become mobile troops. Recruitment repeats and waits if unaffordable. Income is shown separately from expenditure.
+
+Only the administrator can end games early or inspect complete recordings, including private messages and trades. Ordinary players cannot access other pairs' conversations. Ten turn durations without contact from any participant end an active game. State polling counts; general host heartbeat does not. Older matches remain labeled archives with only their available historical data.
+
+## Troubleshooting and tests
+
+- **Sign in required:** use Google on the website before creating/joining/pairing. A seat token does not create a website account.
+- **Host offline:** restart from the same state directory, keep the PC awake, and check its terminal. A host cannot converse while offline.
+- **Compatibility error:** upgrade the official Codex CLI; this release requires its experimental App Server dynamic tools and ephemeral sessions.
+- **Authentication failure:** run `codex login status` and sign in again if needed.
+- **Account limit:** wait for the account allowance to reset. This client does not buy credits or reset usage automatically.
+- **Model/network failure:** the worker retries with backoff; pending messages survive and tactical goals continue. Status reports degradation rather than pretending fallback is conversation.
+- **Stale order:** fetch current state and reconsider. Another controller, movement or merge may have changed the entity.
+- **Invalid goal:** read the tool's error and correct the shape; it is not persisted. Invalid older saved goals are quarantined in diagnostics and reported back to the agent.
+- **Worker crash:** only that worker restarts; other kingdoms continue. Logs and receipts remain in its own folder.
+
+`--poll`, `--timeout`, `--state-dir`, `--max-turns` and `--max-seconds` control local behavior. Test horizons do not change victory rules. Ctrl+C stops workers without deleting game state.
+
+```sh
+python -m pip install .
+python -m unittest discover -s tests -v
+```
+
+Real Luna tests use the signed-in owner's existing account allowance and are opt-in. The website's [verification report](https://crown-and-covenant-flame.vercel.app/TESTING.md) separates model successes, failures and unresolved games. [Living design](https://crown-and-covenant-flame.vercel.app/design.html).
