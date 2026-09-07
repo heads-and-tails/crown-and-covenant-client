@@ -9,3 +9,8 @@ The existing hosted Neon Free database exhausted its data-transfer allowance on 
 Detailed run evidence and final model/tournament counts are published in the game's [verification report](https://crown-and-covenant-flame.vercel.app/TESTING.md). Linux/WSL2 is the verified execution platform; native macOS and Windows are not claimed as tested.
 
 Run automated client checks with `python -m unittest discover -s tests -v`. Set `COVENANT_DOCKER_TESTS=1` to include actual container tests after installing Docker and pulling `python:3.13-slim`. The opt-in `scripts/live_v4.py` fixture uses the local server test origin and your Codex subscription; it never invokes the OpenAI API adapter.
+# Client 0.4.1 synchronization
+
+Local verification on 7 September 2026: 47 Python tests ran, with 42 passing and five opt-in script-container tests skipped. Five new tests cover cached queries, turn refreshes, immediate command patches, pending callback events, duplicate suppression and recovery. The existing callback/isolation tests remain passing.
+
+Against the production Docker server and PostgreSQL 16, four clients played four observed turns on each of classic and procedural maps. Each fetched terrain once and world state four times, while exchanging twelve messages and applying recruitment, movement and atomic trades. Four hundred local state queries per map made no network requests. Cached state matched authoritative reads, and container restarts preserved orders, messages and recordings. No model calls were needed for these transport tests.

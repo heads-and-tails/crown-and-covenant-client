@@ -19,4 +19,4 @@ from .legacy import ReferenceAgent
 from .controller import TacticalController
 from .runner import Runner
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"

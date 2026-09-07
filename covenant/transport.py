@@ -6,6 +6,8 @@ import os
 import re
 import time
 import uuid
+import copy
+import threading
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -83,6 +85,8 @@ class Client:
         self._map = None
         self._observation = None
         self.revision = -1
+        self._cache_cursor = 0
+        self._lock = threading.RLock()
 
     def _request(
         self, path: str, body: dict | None = None, key: str | None = None
@@ -132,7 +136,7 @@ class Client:
                 time.sleep(min(4, 0.5 * 2**attempt))
         raise ProtocolError("Request failed.")
 
-    def state(self) -> dict:
+    def _fetch_state(self) -> dict:
         if self._map is None:
             self._map = self._request(f"/games/{self.connection.gameId}/map")
         observation = self._request(f"/games/{self.connection.gameId}/state?map=0")
@@ -144,31 +148,63 @@ class Client:
         observation.update({"tiles": self._map["tiles"], "size": self._map["size"]})
         self._observation = observation
         self.revision = observation["revision"]
-        return observation
+        self._cache_cursor = observation.get("eventCursor", 0)
+        return copy.deepcopy(observation)
+
+    def state(self, refresh: bool = False) -> dict:
+        """Read the local cache. Runtime updates it; refresh=True explicitly resynchronizes."""
+        with self._lock:
+            if refresh or self._observation is None:
+                self._fetch_state()
+            return copy.deepcopy(self._observation)
+
+    def _query(self, after):
+        o = self._observation or {}
+        query = f"after={after}&revision={self.revision}"
+        if "turn-snapshots-v1" in o.get("capabilities", []):
+            query += f"&sync=turn-v1&turn={o['turn']}&status={o['status']}"
+        return query
+
+    def _apply_update(self, update):
+        if update.get("sync") != "turn-v1":
+            if update.get("observation"):
+                self._observation = {**update["observation"], "tiles": self._map["tiles"], "size": self._map["size"]}
+                self.revision = self._observation["revision"]
+        elif update.get("snapshotRequired"):
+            self._fetch_state()
+        else:
+            o = copy.deepcopy(self._observation)
+            for event in update.get("events", []):
+                if event["kind"] != "state_patch" or event["cursor"] <= self._cache_cursor:
+                    continue
+                patch = event["data"]
+                if (o["turn"], o["status"]) != (patch["turn"], patch["status"]):
+                    continue
+                o.update(patch["set"])
+                for field, delta in patch["arrays"].items():
+                    removed = set(delta["remove"])
+                    items = {x["id"]: x for x in o.get(field, []) if x["id"] not in removed}
+                    items.update({x["id"]: x for x in delta["upsert"]})
+                    o[field] = list(items.values())
+            self._cache_cursor = max(self._cache_cursor, update["cursor"])
+            o["revision"] = max(o["revision"], update["revision"])
+            o["eventCursor"] = self._cache_cursor
+            self._observation = o
+            self.revision = o["revision"]
+        # The world may have advanced again during the snapshot request. Never regress it.
+        if update.get("revision", -1) >= self.revision:
+            self._observation["serverTime"] = update.get("serverTime", self._observation["serverTime"])
+        update["observation"] = copy.deepcopy(self._observation)
+        # Cache maintenance is internal, not another user callback.
+        update["events"] = [e for e in update.get("events", []) if e["kind"] != "state_patch"]
+        return update
 
     def updates(self, after: int = 0) -> dict:
-        if self._map is None:
-            self._map = self._request(f"/games/{self.connection.gameId}/map")
-        update = self._request(
-            f"/games/{self.connection.gameId}/events?after={after}&revision={self.revision}"
-        )
-        if update.get("observation"):
-            observation = update["observation"]
-            observation.update({"tiles": self._map["tiles"], "size": self._map["size"]})
-            if observation.get("protocolVersion") != 3:
-                raise ProtocolError(
-                    "Historical match: create a protocol v3 game.",
-                    code="VERSION_MISMATCH",
-                )
-            self._observation = observation
-            self.revision = update.get("revision", observation["revision"])
-        if self._observation is None:
-            self.state()
-        update["observation"] = dict(self._observation)
-        update["observation"]["serverTime"] = update.get(
-            "serverTime", self._observation["serverTime"]
-        )
-        return update
+        with self._lock:
+            if self._observation is None:
+                self._fetch_state()
+            update = self._request(f"/games/{self.connection.gameId}/events?{self._query(after)}")
+            return self._apply_update(update)
 
     def command(
         self, kind: str, data: dict | None = None, key: str | None = None
@@ -176,9 +212,13 @@ class Client:
         body = {"type": kind}
         if data is not None:
             body["data"] = data
-        return self._request(
-            f"/games/{self.connection.gameId}/commands", body, key or uuid.uuid4().hex
-        )
+        with self._lock:
+            if self._observation is None:
+                self._fetch_state()
+            response = self._request(
+                f"/games/{self.connection.gameId}/commands?{self._query(self._cache_cursor)}", body, key or uuid.uuid4().hex
+            )
+            return self._apply_update(response)
 
     def orders(self, orders: dict, key: str | None = None) -> dict:
         return self.command("orders", orders, key)

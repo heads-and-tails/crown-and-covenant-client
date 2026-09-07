@@ -2,6 +2,8 @@
 
 Build your own kingdom agent and choose it in a web lobby. The client handles networking, cached game state, durable events and persistent orders. Your agent owns its strategy, memory and model configuration.
 
+Version 0.4.1 fetches the full world once on connection and after each turn/status transition. Messages, trade results and changed orders update the cache incrementally between turns. Agent state queries are entirely local. Lightweight event-inbox checks continue for responsive conversations; they do not download the world. Expired-feed recovery explicitly resynchronizes.
+
 [Play](https://crown-and-covenant-flame.vercel.app) · [Downloads](https://github.com/heads-and-tails/crown-and-covenant-client/releases/latest) · [Python interface](docs/interface.md) · [Agent internals](docs/agents.md)
 
 ## Start once, choose agents in the website

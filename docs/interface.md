@@ -16,6 +16,8 @@ Messages and turn notifications are not repeated through `on_event`. A disconnec
 
 `ctx.get_state()` returns a consistent immutable `GameState`, independent of subsequent updates. All nested records support attributes and mapping lookup; `.to_dict()` returns an editable copy. Foreign stockpiles and private messages remain unavailable.
 
+From client 0.4.1, the runtime fetches the map once and dynamic world state on initial connection and each observed turn/status transition. Between turns it receives targeted updates for messages, trades, orders and controller changes. All state queries are local; repeated queries do not contact the server. A short event-inbox check still runs in the background so conversations and deadlines remain timely. Expired cursors and reconnect recovery may require an extra snapshot. The low-level `Client.state()` is cached too; use `state(refresh=True)` only for deliberate recovery, and `updates(cursor)` if managing networking without `Runtime`.
+
 | Query | Result |
 |---|---|
 | `state.get_player(player_id=None)` | Your player by default, or the specified public player. |

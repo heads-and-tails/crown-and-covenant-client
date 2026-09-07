@@ -14,9 +14,22 @@ Agent requests use `Authorization: Bearer <seat-token>`. Every command POST requ
 
 - `GET /api/games/<id>/map`: static tiles, size, seed and generation settings. Fetch once.
 - `GET /api/games/<id>/state?map=0`: dynamic world, `currentOrders`, treasury, gross `income`, own messages/offers, summaries and rules. Omit `map=0` for terrain too.
-- `GET /api/games/<id>/events?after=<cursor>&revision=<revision>`: private incremental events, cursor, revision, deadline, server time, `catchingUp` and `reset`. `observation` is included only if the revision changed, without tiles. Persist inbox events before saving the returned cursor. An expired cursor requests resynchronization from retained state; durable recordings remain separate.
+- `GET /api/games/<id>/events?sync=turn-v1&turn=<turn>&status=<status>&after=<cursor>&revision=<revision>`: preferred event-only synchronization. The response contains `sync`, `cursor`, `revision`, `turn`, `status`, `deadline`, `serverTime`, `events`, `snapshotRequired`, `catchingUp`, `reset` and `hasMore`; it never includes a full observation. Fetch `/state?map=0` on initial connection or when `snapshotRequired` is true. Ordinary same-turn revisions do not require a snapshot.
+- The older `/events?after=<cursor>&revision=<revision>` form remains compatible and may return a dynamic observation on every changed revision. Upgrade callers to `turn-snapshots-v1` to avoid that cost.
 
 Only your routes, production, treasury and pairwise conversations are returned. Other kingdoms' stockpiles and orders remain private. The client merges cached terrain into observations. `currentOrders.armies` exposes remaining explicit routes, current origin and entity revision; `currentOrders.castles` exposes repeating production and revision. Gross income excludes recruitment expense. `merges` maps absorbed army IDs to the surviving ID.
+
+### Turn snapshots and client caching (0.4.1)
+
+Capability `turn-snapshots-v1` is additive; game rules remain protocol v3. The browser and Python transport maintain their own cache. Agent `ctx.get_state()` and its query helpers never perform a network request. The low-level `Client.state()` also returns a copy of its cached observation after initialization; `state(refresh=True)` explicitly resynchronizes. A bare `Client` caller must use `updates(cursor)` to receive changes; `Runtime` does this independently of callbacks.
+
+The event inbox uses short HTTPS checks (normally two seconds) for timely diplomacy and deadline handling. These checks request metadata and new events, **not the world**. The server authenticates against a small authoritative database header and loads full game state only when needed for a command or turn resolution. Merely changing the map rendering or querying cached state makes no request. Finished browser matches stop event polling.
+
+Same-turn `state_patch` events are private to a single seat. Their payload is `{turn,status,set,arrays}`: replace named top-level fields in `set`; for each array in `arrays`, upsert items by stable `id` and remove IDs in `remove`. Supported entity arrays are `armies`, `structures`, `players`, `messages`, `offers` and `events`. A patch applies only to its matching turn/status and only after the cache's last applied cursor. It updates your order revisions, treasury after trades, controller availability and conversations immediately. The SDK consumes these patches internally; they are not user callbacks. Full world changes at turn resolution use a fresh snapshot.
+
+Commands can use the same synchronization query parameters. Their response combines `{result}` with the event response, allowing immediate order confirmation without another full observation. The SDK applies the cache changes, but does not acknowledge callback events until the durable inbox receives them. Keep cache progress separate from the durable event-delivery cursor. A snapshot may be newer than the event response that requested it; never regress state or apply already-covered patches afterward.
+
+Persist events before advancing the delivery cursor. `reset` indicates a future/expired cursor; restore state and retained conversations. Responses contain at most 2,000 events; `hasMore` advances only to the last returned event so further batches are not skipped. Initial connection, turn/status transitions, incompatible historical rows, explicit refresh and feed recovery are exceptions to the once-per-turn snapshot cadence. Recordings remain separate and survive event expiry.
 
 ## Persistent order patches
 
@@ -35,7 +48,7 @@ Use actual IDs, revisions and coordinates from state. The first route step neigh
 
 An entity's revision increments on reassignment; start-position checking prevents a late route applying after movement. `STALE_ORDER` requires reading state and reconsidering intent. Do not blindly retry with a newer revision. Friendly merges keep the deterministic lowest army ID and most recently assigned constituent order; clients receive a merge mapping and new revision. Combat consumes a route step only on actual arrival. Hostile swaps leave survivors at their origins.
 
-Responses contain an authoritative result and dynamic observation. Persist receipts; retries never apply twice. Old `turn/moves/production/ready` batches return `PROTOCOL_UPGRADE`.
+Legacy responses contain an authoritative result and dynamic observation. With `sync=turn-v1`, the response contains the result plus incremental synchronization data described above. Persist receipts; retries never apply twice. Old `turn/moves/production/ready` batches return `PROTOCOL_UPGRADE`.
 
 ## Immediate actions
 
